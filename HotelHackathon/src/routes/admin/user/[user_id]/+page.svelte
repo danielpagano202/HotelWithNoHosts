@@ -12,19 +12,31 @@
 	let userMessages: Message[] = $state([]);
 	let newMessage = $state('');
 	let loading = $state(false);
+	let loadingPage = $state(true);
+	let pageError = $state('');
 
-	onMount(() => {
+	const loadThread = async (userId: string) => {
+		const thread = await getMessagesByUserId(userId);
+		userMessages = [...thread].reverse();
+	};
+
+	const isAgentSender = (sender: Message['sender']) => sender === 'AI' || sender === 'Staff';
+
+	onMount(async () => {
 		if (!$isAuthenticated) {
-			goto('/login');
+			await goto('/login');
+			return;
 		}
 
-		const foundUser = getUserById(params.user_id);
-		if (!foundUser) {
-			goto('/admin');
+		try {
+			user = await getUserById(params.user_id);
+			await loadThread(params.user_id);
+		} catch (error) {
+			pageError = error instanceof Error ? error.message : 'Could not load user conversation.';
+			await goto('/admin');
+		} finally {
+			loadingPage = false;
 		}
-
-		user = foundUser;
-		userMessages = getMessagesByUserId(params.user_id);
 	});
 
 	const sendMessage = async () => {
@@ -33,9 +45,11 @@
 
 		try {
 			const message = newMessage.trim();
-			addMessageForUser(user.id, 'admin', message);
-			userMessages = getMessagesByUserId(user.id);
+			await addMessageForUser(user.id, 'Staff', message);
+			await loadThread(user.id);
 			newMessage = '';
+		} catch (error) {
+			pageError = error instanceof Error ? error.message : 'Failed to send message.';
 		} finally {
 			loading = false;
 		}
@@ -58,7 +72,7 @@
 				</svg>
 			</a>
 			<div>
-				<h1 class="text-3xl font-bold">{user?.name || 'User'}</h1>
+				<h1 class="text-3xl font-bold">{user?.name || 'Guest'}</h1>
 				<p class="text-sm text-base-content/70">{user?.email}</p>
 			</div>
 		</div>
@@ -71,19 +85,24 @@
 		<div class="card border border-base-300/60 bg-base-100/85 shadow-md lg:col-span-2">
 			<div class="card-body space-y-4">
 				<h2 class="card-title">Conversation</h2>
+				{#if pageError}
+					<div class="alert alert-error text-sm">{pageError}</div>
+				{/if}
 
 				<div class="flex max-h-96 flex-col gap-3 rounded-xl border border-base-300/70 bg-base-200/40 p-4">
 					<div class="flex-1 space-y-3 overflow-y-auto pr-1">
-						{#if userMessages.length === 0}
+						{#if loadingPage}
+							<p class="text-center text-sm text-base-content/60">Loading conversation...</p>
+						{:else if userMessages.length === 0}
 							<p class="text-center text-sm text-base-content/60">No messages yet. Start the conversation.</p>
 						{:else}
 							{#each userMessages as message}
-								<div class={`chat ${message.role === 'admin' ? 'chat-end' : 'chat-start'}`}>
-									<div class={`chat-bubble ${message.role === 'admin' ? 'chat-bubble-primary' : ''}`}>
+								<div class={`chat ${isAgentSender(message.sender) ? 'chat-end' : 'chat-start'}`}>
+									<div class={`chat-bubble ${message.sender === 'Staff' ? 'chat-bubble-primary' : message.sender === 'AI' ? '' : ''}`}>
 										{message.content}
 									</div>
 									<div class="chat-footer text-xs opacity-70">
-										{new Date(message.createdAt).toLocaleTimeString()}
+										{message.sender} • {new Date(message.created).toLocaleTimeString()}
 									</div>
 								</div>
 							{/each}
@@ -124,18 +143,7 @@
 							<p class="text-xs text-base-content/60">Name</p>
 							<p class="font-medium">{user?.name}</p>
 						</div>
-						{#if user?.phone}
-							<div>
-								<p class="text-xs text-base-content/60">Phone</p>
-								<p class="font-medium">{user.phone}</p>
-							</div>
-						{/if}
-						{#if user?.roomNumber}
-							<div>
-								<p class="text-xs text-base-content/60">Current Room</p>
-								<p class="font-medium">{user.roomNumber}</p>
-							</div>
-						{/if}
+						
 					</div>
 				</div>
 			</div>
@@ -144,18 +152,7 @@
 				<div class="card-body space-y-3">
 					<h3 class="card-title text-lg">Stay Information</h3>
 					<div class="space-y-3 text-sm">
-						{#if user?.checkInAt}
-							<div>
-								<p class="text-xs text-base-content/60">Check-in</p>
-								<p class="font-medium">{new Date(user.checkInAt).toLocaleString()}</p>
-							</div>
-						{/if}
-						{#if user?.checkOutAt}
-							<div>
-								<p class="text-xs text-base-content/60">Check-out</p>
-								<p class="font-medium">{new Date(user.checkOutAt).toLocaleString()}</p>
-							</div>
-						{/if}
+						
 					</div>
 				</div>
 			</div>

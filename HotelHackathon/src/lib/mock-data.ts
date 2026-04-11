@@ -1,23 +1,20 @@
 import { inferRole } from '$lib/stores/auth';
+import { pb } from './pocketbase';
 
 type RoomStatus = 'occupied' | 'ready' | 'needs_cleaning';
 
 export type User = {
 	id: string;
 	email: string;
-	name: string;
-	phone?: string;
-	checkInAt?: string;
-	checkOutAt?: string;
-	roomNumber?: string;
+	name?: string;
 };
 
 export type Message = {
 	id: string;
-	userId: string;
-	role: 'user' | 'admin';
+	user_chat: string;
+	sender: 'User' | 'AI' | 'Staff';
 	content: string;
-	createdAt: string;
+	created: string;
 };
 
 export type Room = {
@@ -56,14 +53,16 @@ export type ScanLog = {
 	createdAt: string;
 };
 
-export type AiEscalation = {
+export type EscalationNotification = {
 	id: string;
-	guest: string;
-	roomNumber: string;
-	issue: string;
-	priority: 'low' | 'medium' | 'high';
-	createdAt: string;
-	status: 'open' | 'resolved';
+	user: string;
+	content: string;
+	severity: 'low' | 'medium' | 'high';
+	created: string;
+	resolved: boolean;
+	expand?: {
+		user: User;
+	}
 };
 
 const rooms: Room[] = [
@@ -126,62 +125,6 @@ const scanLogs: ScanLog[] = [
 	{ id: 's-3', roomNumber: '312', userEmail: 'cleaner@hotel.com', action: 'entry', createdAt: '2026-04-11T17:08:42Z' }
 ];
 
-const aiEscalations: AiEscalation[] = [
-	{
-		id: 'a-1',
-		guest: 'Tori Hayes',
-		roomNumber: '410',
-		issue: 'Need baby crib in room before 8 PM.',
-		priority: 'high',
-		createdAt: '2026-04-11T16:22:00Z',
-		status: 'open'
-	},
-	{
-		id: 'a-2',
-		guest: 'Mike Patel',
-		roomNumber: '205',
-		issue: 'Late checkout request.',
-		priority: 'medium',
-		createdAt: '2026-04-11T15:10:00Z',
-		status: 'resolved'
-	}
-];
-
-const users: User[] = [
-	{
-		id: 'u-1',
-		email: 'tori@example.com',
-		name: 'Tori Hayes',
-		phone: '555-0101',
-		checkInAt: '2026-04-11T14:00:00Z',
-		checkOutAt: '2026-04-14T11:00:00Z',
-		roomNumber: '410'
-	},
-	{
-		id: 'u-2',
-		email: 'mike@example.com',
-		name: 'Mike Patel',
-		phone: '555-0102',
-		checkInAt: '2026-04-12T15:00:00Z',
-		checkOutAt: '2026-04-15T11:00:00Z',
-		roomNumber: '205'
-	},
-	{
-		id: 'u-3',
-		email: 'cleaner@hotel.com',
-		name: 'Jane Smith',
-		phone: '555-0103'
-	}
-];
-
-const messages: Message[] = [
-	{ id: 'm-1', userId: 'u-1', role: 'user', content: 'Can I get a baby crib for the room?', createdAt: '2026-04-11T16:22:00Z' },
-	{ id: 'm-2', userId: 'u-1', role: 'admin', content: 'Yes, we can arrange that. We will have it delivered by 8 PM.', createdAt: '2026-04-11T16:25:00Z' },
-	{ id: 'm-3', userId: 'u-1', role: 'user', content: 'Great! Can I also get late checkout on my last day?', createdAt: '2026-04-11T17:00:00Z' },
-	{ id: 'm-4', userId: 'u-2', role: 'user', content: 'Is there a late checkout option available?', createdAt: '2026-04-11T15:10:00Z' },
-	{ id: 'm-5', userId: 'u-2', role: 'admin', content: 'Late checkout until 2 PM can be arranged for a small fee. Would you like that?', createdAt: '2026-04-11T15:15:00Z' }
-];
-
 const reservations: Reservation[] = [
 	{
 		id: 'res-1',
@@ -201,6 +144,8 @@ const reservations: Reservation[] = [
 	}
 ];
 
+let messages: Message[] = [];
+
 export const getHomeSnapshot = (user: { email?: string } | null) => {
 	const role = inferRole(user ? { id: 'local', email: user.email || '' } : null);
 
@@ -213,49 +158,48 @@ export const getHomeSnapshot = (user: { email?: string } | null) => {
 
 export const getRoomById = (roomId: string) => rooms.find((room) => room.id === roomId);
 
-export const getAdminSnapshot = () => ({
-	scanLogs,
-	aiEscalations
-});
-
-export const getUserById = (userId: string) => users.find((user) => user.id === userId);
-
-export const getAllUsers = () => users;
-
-export const getMessagesByUserId = (userId: string) => messages.filter((msg) => msg.userId === userId);
-
-export const addMessageForUser = (userId: string, role: 'user' | 'admin', content: string) => {
-	const newMessage: Message = {
-		id: `m-${messages.length + 1}`,
-		userId,
-		role,
-		content,
-		createdAt: new Date().toISOString()
+export const getAdminSnapshot = async () => {
+	const escalationNotifications = await pb.collection('EscalationNotifications').getFullList({
+		sort: '-created',
+		filter: 'resolved = false',
+		expand: 'user'
+	});
+	return {
+		scanLogs,
+		escalationNotifications
 	};
-	messages.push(newMessage);
+};
+export const markEscalationNotificationResolved = async (id: string) => {
+	await pb.collection('EscalationNotifications').update(id, {
+		resolved: true
+	});
+};
+
+export const getUserById = async (userId: string) => {
+	return pb.collection<User>('users').getOne(userId);
+};
+
+export const getAllUsers = async () => {
+	return pb.collection<User>('users').getFullList({
+		sort: 'email'
+	});
+};
+
+export const getMessagesByUserId = async (userId: string) => {
+	messages = await pb.collection<Message>('Chatmessages').getFullList({
+		filter: `user_chat = "${userId}"`,
+		sort: '-created'
+	});
+	return messages;
+};
+
+export const addMessageForUser = async (userId: string, role: 'User' | 'AI' | 'Staff', content: string) => {
+	const newMessage = await pb.collection<Message>('Chatmessages').create({
+		user_chat: userId,
+		sender: role,
+		content
+	});
+	messages = [newMessage, ...messages];
 	return newMessage;
 };
-
-export const askMockAiHost = async (prompt: string) => {
-	const normalized = prompt.toLowerCase();
-	if (normalized.includes('late checkout')) {
-		return {
-			answer: 'I can request a late checkout. I have forwarded this to the property manager and will notify you once approved.',
-			escalated: true
-		};
-	}
-
-	if (normalized.includes('wifi')) {
-		return {
-			answer: 'The Wi-Fi network is HotelNoHost_Guest and your passphrase is in the room tablet under Connectivity.',
-			escalated: false
-		};
-	}
-
-	return {
-		answer: 'I can help with room access, amenities, checkout timing, and maintenance requests. If needed, I can escalate to staff.',
-		escalated: false
-	};
-};
-
 // Swap each function here with PocketBase queries when backend collections are ready.

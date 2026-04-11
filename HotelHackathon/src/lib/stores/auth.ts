@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 import { derived, writable } from 'svelte/store';
 import { pb } from '$lib/pocketbase';
-
+import Cookies from 'js-cookie';
 type AuthUser = {
 	id: string;
 	email: string;
@@ -21,6 +21,8 @@ export const isAuthenticated = derived(authUser, ($authUser) => Boolean($authUse
 export const login = async (email: string, password: string) => {
 	const response = await pb.collection('users').authWithPassword(email, password);
 	authUser.set((response.record as unknown as AuthUser) ?? null);
+	console.log('Login successful, user:', response.record);
+	Cookies.set('pb_auth', pb.authStore.exportToCookie());
 	return response;
 };
 
@@ -44,6 +46,7 @@ export const register = async (payload: {
 export const logout = () => {
 	pb.authStore.clear();
 	authUser.set(null);
+	Cookies.remove('pb_auth');
 };
 
 export const getDisplayName = (user: AuthUser | null) => {
