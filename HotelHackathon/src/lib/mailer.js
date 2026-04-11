@@ -9,6 +9,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// @ts-ignore
 export async function sendBookingConfirmation(customerEmail, bookingDetails) {
   const { customerName, checkIn, checkOut, roomId, bookingId } = bookingDetails;
 
