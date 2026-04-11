@@ -45,8 +45,7 @@
 				<div class="navbar-center hidden lg:flex">
 					<ul class="menu menu-horizontal gap-1 px-1">
 						<li><a href="/home">Home</a></li>
-						<li><a href="/help">Help</a></li>
-						<li><a href="/admin">Admin</a></li>
+						<li><a href="/help">Help</a></li>					<li><a href="/book">Book</a></li>						<li><a href="/admin">Admin</a></li>
 					</ul>
 				</div>
 				<div class="navbar-end gap-2">
