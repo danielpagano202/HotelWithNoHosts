@@ -1,0 +1,104 @@
+@import 'tailwindcss';
+@plugin "daisyui" {
+	themes: corporate --default, night;
+}
+
+:root {
+	--brand-bg: #f4efe3;
+	--brand-surface: #fff9ee;
+	--brand-ink: #172123;
+	--brand-accent: #0f766e;
+	--brand-accent-soft: #99f6e4;
+	--brand-warm: #c97335;
+	--brand-border: #cbd5d1;
+	font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+}
+
+html,
+body {
+	min-height: 100%;
+	background:
+		radial-gradient(circle at 15% 20%, color-mix(in oklab, var(--brand-accent-soft) 60%, white) 0%, transparent 30%),
+		radial-gradient(circle at 90% 10%, color-mix(in oklab, #fbbf24 35%, white) 0%, transparent 24%),
+		linear-gradient(140deg, var(--brand-bg) 0%, #ecfdf5 38%, #fef3c7 100%);
+	color: var(--brand-ink);
+}
+
+h1,
+h2,
+h3,
+h4 {
+	font-family: 'Fraunces', Georgia, serif;
+	letter-spacing: -0.01em;
+}
+
+.app-shell {
+	position: relative;
+	overflow-x: clip;
+}
+
+.aurora {
+	position: absolute;
+	z-index: 0;
+	border-radius: 9999px;
+	filter: blur(40px);
+	opacity: 0.45;
+	animation: floatGlow 12s ease-in-out infinite;
+}
+
+.aurora.one {
+	height: 14rem;
+	width: 14rem;
+	background: color-mix(in oklab, var(--brand-accent) 45%, white);
+	top: 3rem;
+	right: -4rem;
+}
+
+.aurora.two {
+	height: 18rem;
+	width: 18rem;
+	background: color-mix(in oklab, var(--brand-warm) 40%, white);
+	bottom: 4rem;
+	left: -6rem;
+	animation-delay: -4s;
+}
+
+.content-layer {
+	position: relative;
+	z-index: 1;
+}
+
+.stagger > * {
+	opacity: 0;
+	transform: translateY(14px);
+	animation: riseIn 550ms ease forwards;
+}
+
+.stagger > *:nth-child(2) {
+	animation-delay: 80ms;
+}
+
+.stagger > *:nth-child(3) {
+	animation-delay: 160ms;
+}
+
+.stagger > *:nth-child(4) {
+	animation-delay: 240ms;
+}
+
+@keyframes floatGlow {
+	0%,
+	100% {
+		transform: translateY(0) translateX(0);
+	}
+	50% {
+		transform: translateY(-14px) translateX(8px);
+	}
+}
+
+@keyframes riseIn {
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
