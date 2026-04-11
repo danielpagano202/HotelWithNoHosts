@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { getAdminSnapshot } from '$lib/mock-data';
+	import { getAdminSnapshot, getAllUsers } from '$lib/mock-data';
 	import { authUser, inferRole, isAuthenticated } from '$lib/stores/auth';
 
 	const adminData = getAdminSnapshot();
+	const users = getAllUsers();
 	const role = $derived(inferRole($authUser));
 
 	onMount(() => {
@@ -72,6 +73,38 @@
 					</div>
 				{/each}
 			</div>
+		</div>
+	</article>
+
+	<article class="card border border-base-300/60 bg-base-100/85 shadow-md">
+		<div class="card-body overflow-x-auto">
+			<h2 class="card-title">Users</h2>
+			<table class="table table-zebra">
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th>Email</th>
+						<th>Room</th>
+						<th>Check-in</th>
+						<th>Check-out</th>
+						<th>Action</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each users as user}
+						<tr>
+							<td class="font-medium">{user.name}</td>
+							<td class="text-sm">{user.email}</td>
+							<td>{user.roomNumber || '-'}</td>
+							<td class="text-sm">{user.checkInAt ? new Date(user.checkInAt).toLocaleDateString() : '-'}</td>
+							<td class="text-sm">{user.checkOutAt ? new Date(user.checkOutAt).toLocaleDateString() : '-'}</td>
+							<td>
+								<a href="/admin/user/{user.id}" class="btn btn-ghost btn-xs">View</a>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		</div>
 	</article>
 </section>

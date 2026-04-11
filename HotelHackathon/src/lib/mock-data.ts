@@ -2,6 +2,24 @@ import { inferRole } from '$lib/stores/auth';
 
 type RoomStatus = 'occupied' | 'ready' | 'needs_cleaning';
 
+export type User = {
+	id: string;
+	email: string;
+	name: string;
+	phone?: string;
+	checkInAt?: string;
+	checkOutAt?: string;
+	roomNumber?: string;
+};
+
+export type Message = {
+	id: string;
+	userId: string;
+	role: 'user' | 'admin';
+	content: string;
+	createdAt: string;
+};
+
 export type Room = {
 	id: string;
 	number: string;
@@ -11,6 +29,15 @@ export type Room = {
 	checkInAt: string;
 	checkOutAt: string;
 	accessCode: string;
+};
+
+export type Reservation = {
+	id: string;
+	userId: string;
+	guestName: string;
+	checkInAt: string;
+	checkOutAt: string;
+	roomId: string;
 };
 
 export type AppNotification = {
@@ -120,6 +147,60 @@ const aiEscalations: AiEscalation[] = [
 	}
 ];
 
+const users: User[] = [
+	{
+		id: 'u-1',
+		email: 'tori@example.com',
+		name: 'Tori Hayes',
+		phone: '555-0101',
+		checkInAt: '2026-04-11T14:00:00Z',
+		checkOutAt: '2026-04-14T11:00:00Z',
+		roomNumber: '410'
+	},
+	{
+		id: 'u-2',
+		email: 'mike@example.com',
+		name: 'Mike Patel',
+		phone: '555-0102',
+		checkInAt: '2026-04-12T15:00:00Z',
+		checkOutAt: '2026-04-15T11:00:00Z',
+		roomNumber: '205'
+	},
+	{
+		id: 'u-3',
+		email: 'cleaner@hotel.com',
+		name: 'Jane Smith',
+		phone: '555-0103'
+	}
+];
+
+const messages: Message[] = [
+	{ id: 'm-1', userId: 'u-1', role: 'user', content: 'Can I get a baby crib for the room?', createdAt: '2026-04-11T16:22:00Z' },
+	{ id: 'm-2', userId: 'u-1', role: 'admin', content: 'Yes, we can arrange that. We will have it delivered by 8 PM.', createdAt: '2026-04-11T16:25:00Z' },
+	{ id: 'm-3', userId: 'u-1', role: 'user', content: 'Great! Can I also get late checkout on my last day?', createdAt: '2026-04-11T17:00:00Z' },
+	{ id: 'm-4', userId: 'u-2', role: 'user', content: 'Is there a late checkout option available?', createdAt: '2026-04-11T15:10:00Z' },
+	{ id: 'm-5', userId: 'u-2', role: 'admin', content: 'Late checkout until 2 PM can be arranged for a small fee. Would you like that?', createdAt: '2026-04-11T15:15:00Z' }
+];
+
+const reservations: Reservation[] = [
+	{
+		id: 'res-1',
+		userId: 'u-1',
+		guestName: 'Tori Hayes',
+		checkInAt: '2026-04-11T14:00:00Z',
+		checkOutAt: '2026-04-14T11:00:00Z',
+		roomId: 'r-410'
+	},
+	{
+		id: 'res-2',
+		userId: 'u-2',
+		guestName: 'Mike Patel',
+		checkInAt: '2026-04-12T15:00:00Z',
+		checkOutAt: '2026-04-15T11:00:00Z',
+		roomId: 'r-205'
+	}
+];
+
 export const getHomeSnapshot = (user: { email?: string } | null) => {
 	const role = inferRole(user ? { id: 'local', email: user.email || '' } : null);
 
@@ -136,6 +217,24 @@ export const getAdminSnapshot = () => ({
 	scanLogs,
 	aiEscalations
 });
+
+export const getUserById = (userId: string) => users.find((user) => user.id === userId);
+
+export const getAllUsers = () => users;
+
+export const getMessagesByUserId = (userId: string) => messages.filter((msg) => msg.userId === userId);
+
+export const addMessageForUser = (userId: string, role: 'user' | 'admin', content: string) => {
+	const newMessage: Message = {
+		id: `m-${messages.length + 1}`,
+		userId,
+		role,
+		content,
+		createdAt: new Date().toISOString()
+	};
+	messages.push(newMessage);
+	return newMessage;
+};
 
 export const askMockAiHost = async (prompt: string) => {
 	const normalized = prompt.toLowerCase();
