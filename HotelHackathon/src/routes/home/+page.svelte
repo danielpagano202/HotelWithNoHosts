@@ -21,7 +21,13 @@
 			<h1 class="text-4xl font-bold">Welcome, {displayName}</h1>
 			<p class="text-base-content/70">Role: {role}. This page uses mock data and is ready for PocketBase collection queries.</p>
 		</div>
-		<a class="btn btn-outline" href="/help">Ask AI Host</a>
+		<div class="flex gap-2">
+			<a class="btn btn-primary gap-2" href="/booking">
+				<span class="text-lg">🔑</span>
+				Book a Room
+			</a>
+			<a class="btn btn-outline" href="/help">Ask AI Host</a>
+		</div>
 	</div>
 
 	<div class="grid gap-4 lg:grid-cols-2">
