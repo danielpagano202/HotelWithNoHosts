@@ -11,6 +11,7 @@
   let availableRooms = $state([] as Array<{id: string, roomNumber: string, location: string, numBeds: number}>);
   let loading = $state(false);
   let error = $state('');
+  let successMessage = $state('');
 
   const today = new Date();
   const tomorrow = new Date(today);
@@ -41,6 +42,7 @@
 
   async function handleSubmit() {
     error = '';
+    successMessage = '';
     if (!guestName || !guestEmail || !checkIn || !checkOut || !selectedRoom) {
       error = 'Please fill in all fields and select a room.';
       return;
@@ -119,6 +121,15 @@
       <h2 class="card-title text-3xl gap-2">🔑 Reserve Your Room</h2>
       <p class="text-base-content/70 text-sm mt-1">Get instant digital key access — skip the front desk entirely</p>
     </div>
+
+    {#if successMessage}
+      <div class="alert alert-success text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        {successMessage}
+      </div>
+    {/if}
 
     {#if error}
       <div class="alert alert-error text-sm">{error}</div>

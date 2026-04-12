@@ -1,7 +1,13 @@
 <script lang="ts">
   import type { PageData } from './$types';
 
-  const { name, code, checkIn, checkOut, addToWalletLink } = $props();
+  let { data } = $props<{ data: PageData }>();
+
+  const name = data.name;
+  const code = data.code;
+  const checkIn = data.checkIn;
+  const checkOut = data.checkOut;
+  const addToWalletLink = data.addToWalletLink;
 
   const fmt = (d: string) =>
     d ? new Date(d).toLocaleDateString('en-US', {
@@ -10,7 +16,6 @@
 </script>
 
 <div class="flex flex-col gap-6">
-
   <div class="alert alert-success">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -24,19 +29,19 @@
       <div class="grid grid-cols-2 gap-3 text-sm">
         <div class="bg-base-200 rounded-xl p-4">
           <p class="text-base-content/50 text-xs mb-1">Guest</p>
-          <p class="font-semibold">{name}</p>
+          <p class="font-semibold">{name || 'No name'}</p>
         </div>
         <div class="bg-base-200 rounded-xl p-4">
           <p class="text-base-content/50 text-xs mb-1">Confirmation</p>
-          <p class="font-semibold font-mono">{code}</p>
+          <p class="font-semibold font-mono">{code || 'No code'}</p>
         </div>
         <div class="bg-base-200 rounded-xl p-4">
           <p class="text-base-content/50 text-xs mb-1">Check-in</p>
-          <p class="font-semibold">{fmt(checkIn)}</p>
+          <p class="font-semibold">{checkIn ? fmt(checkIn) : 'No check-in'}</p>
         </div>
         <div class="bg-base-200 rounded-xl p-4">
           <p class="text-base-content/50 text-xs mb-1">Check-out</p>
-          <p class="font-semibold">{fmt(checkOut)}</p>
+          <p class="font-semibold">{checkOut ? fmt(checkOut) : 'No check-out'}</p>
         </div>
       </div>
     </div>
