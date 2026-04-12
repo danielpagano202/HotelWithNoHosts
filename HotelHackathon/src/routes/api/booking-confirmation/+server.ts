@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { sendBookingConfirmation } from '$lib/mailer.js';
+import { createHotelKeyPass } from '$lib/hotelkeypass';
 
 type BookingPayload = {
   customerEmail: string;
@@ -38,8 +39,9 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     await sendBookingConfirmation(body.customerEmail, bookingDetails);
-
-    return json({ success: true, message: 'Booking confirmation email sent.' }, { status: 200 });
+    const addToWalletLink = createHotelKeyPass({ confirmationCode: bookingDetails.bookingId, guestName: bookingDetails.customerName, room: bookingDetails.roomId, checkIn: bookingDetails.checkIn, checkOut: bookingDetails.checkOut });
+    console.log(addToWalletLink);
+    return json({ success: true, message: 'Booking confirmation email sent.', addToWalletLink }, { status: 200 });
   } catch (error) {
     console.error('Booking confirmation email error:', error);
     return json({ error: 'Failed to send booking confirmation email.' }, { status: 500 });

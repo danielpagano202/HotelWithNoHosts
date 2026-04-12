@@ -1,5 +1,8 @@
 import nodemailer from 'nodemailer';
-import { EMAIL_USER, EMAIL_PASS } from '$env/static/private';
+import { env } from '$env/dynamic/private';
+
+const EMAIL_USER = env.EMAIL_USER;
+const EMAIL_PASS = env.EMAIL_PASS;
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -9,12 +12,12 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// @ts-ignore
 export async function sendBookingConfirmation(customerEmail, bookingDetails) {
   const { customerName, checkIn, checkOut, roomId, bookingId } = bookingDetails;
+  const mailFrom = EMAIL_USER || env.EMAIL_USER || 'no-reply@example.com';
 
   await transporter.sendMail({
-    from: `"Grand Hotel" <${process.env.EMAIL_USER}>`,
+    from: `"Grand Hotel" <${mailFrom}>`,
     to: customerEmail,
     subject: `Reservation Confirmed - #${bookingId}`,
     html: `

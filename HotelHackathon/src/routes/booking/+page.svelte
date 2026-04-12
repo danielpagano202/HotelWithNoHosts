@@ -57,17 +57,13 @@
         return;
       }
 
-      console.log('Making reservation request with:', { guestName, guestEmail, checkIn, checkOut, userId, roomId: selectedRoom });
-
-      const res = await fetch('/api/reservation', {
+      const res = await fetch('/booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ guestName, guestEmail, checkIn, checkOut, userId, roomId: selectedRoom }),
       });
 
-      console.log('Reservation response status:', res.status);
       const data = await res.json();
-      console.log('Reservation response data:', data);
       if (!res.ok) throw new Error(data.error || 'Something went wrong.');
 
       const params = new URLSearchParams({

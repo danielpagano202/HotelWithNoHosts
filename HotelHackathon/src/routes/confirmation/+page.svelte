@@ -55,12 +55,15 @@
         "Open My Door" to unlock your room. No front desk needed.
       </p>
       {#if addToWalletLink}
-        <a href={addToWalletLink} target="_blank" rel="noopener">
-          <img
-            src="https://pay.google.com/about/static_kcs/images/badges/googlepay_savebutton_withtitle_dark.svg"
-            alt="Add to Google Wallet"
-            class="h-14"
-          />
+        <a class="btn btn-primary btn-lg gap-2" href={addToWalletLink} target="_blank" rel="noopener">
+          <span>🔑</span>
+          Add to Google Wallet
+        </a>
+        <p class="text-xs text-base-content/60 max-w-md break-words">
+          Or use this link directly if the button does not work:
+        </p>
+        <a class="text-sm link link-primary break-all" href={addToWalletLink} target="_blank" rel="noopener">
+          {addToWalletLink}
         </a>
       {:else}
         <div class="text-sm text-error">Wallet link unavailable — check your server config.</div>
