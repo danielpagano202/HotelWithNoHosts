@@ -58,6 +58,7 @@ export type EscalationNotification = {
 	user: string;
 	content: string;
 	severity: 'low' | 'medium' | 'high';
+	reference_message: string;
 	created: string;
 	resolved: boolean;
 	expand?: {
@@ -193,13 +194,4 @@ export const getMessagesByUserId = async (userId: string) => {
 	return messages;
 };
 
-export const addMessageForUser = async (userId: string, role: 'User' | 'AI' | 'Staff', content: string) => {
-	const newMessage = await pb.collection<Message>('Chatmessages').create({
-		user_chat: userId,
-		sender: role,
-		content
-	});
-	messages = [newMessage, ...messages];
-	return newMessage;
-};
 // Swap each function here with PocketBase queries when backend collections are ready.

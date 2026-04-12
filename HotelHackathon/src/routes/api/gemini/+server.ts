@@ -124,6 +124,7 @@ export const POST = async ({ request, cookies }) => {
         await pb.collection('EscalationNotifications').create({
             user: pb.authStore.record!.id,
             content: `AI Escalation: ${parsedReply.title}`,
+            reference_message: body.message,
             severity: parsedReply.severity,
             resolved: false,
         });
