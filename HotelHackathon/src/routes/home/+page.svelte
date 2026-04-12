@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { getAllNotifications, getHomeSnapshot, getNotificationsForUser, getRoomById } from '$lib/mock-data';
+	import {
+		getAllNotifications,
+		getHomeSnapshot,
+		getNotificationsForUser,
+		getRoomById,
+		markNotificationRead
+	} from '$lib/mock-data';
 	import { authUser, getDisplayName, inferRole, isAuthenticated } from '$lib/stores/auth';
 
 	const displayName = $derived(getDisplayName($authUser));
@@ -14,6 +20,8 @@
 	let notifications = $state<Awaited<ReturnType<typeof getAllNotifications>>>([]);
 	let loading = $state(true);
 	let loadError = $state('');
+	let markingReadById = $state<Record<string, boolean>>({});
+	let markReadErrorById = $state<Record<string, string>>({});
 	type NotificationItem = Awaited<ReturnType<typeof getAllNotifications>>[number];
 
 	const getNotificationTitle = (notice: NotificationItem) =>
@@ -27,6 +35,25 @@
 		(notice as { body?: string; Body?: string; content?: string; text?: string }).content ||
 		(notice as { body?: string; Body?: string; content?: string; text?: string }).text ||
 		'No details provided.';
+
+	const handleMarkRead = async (noticeId: string) => {
+		if (markingReadById[noticeId]) return;
+
+		markingReadById = { ...markingReadById, [noticeId]: true };
+		markReadErrorById = { ...markReadErrorById, [noticeId]: '' };
+
+		try {
+			await markNotificationRead(noticeId);
+			notifications = notifications.filter((notice) => notice.id !== noticeId);
+		} catch (error) {
+			markReadErrorById = {
+				...markReadErrorById,
+				[noticeId]: error instanceof Error ? error.message : 'Failed to mark notification as read.'
+			};
+		} finally {
+			markingReadById = { ...markingReadById, [noticeId]: false };
+		}
+	};
 
 	const loadDashboard = async () => {
 		loading = true;
@@ -218,8 +245,20 @@
 				<div class="space-y-3">
 					{#each notifications as notice}
 						<div class="rounded-xl border border-base-300/60 bg-base-200/60 p-3">
-							<p class="font-semibold">{getNotificationTitle(notice)}</p>
+							<div class="flex items-start justify-between gap-3">
+								<p class="font-semibold">{getNotificationTitle(notice)}</p>
+								<button
+									class="btn btn-xs btn-outline"
+									onclick={() => handleMarkRead(notice.id)}
+									disabled={markingReadById[notice.id]}
+								>
+									{#if markingReadById[notice.id]}Saving...{:else}Mark as read{/if}
+								</button>
+							</div>
 							<p class="mt-1 text-sm opacity-80 whitespace-pre-wrap">{getNotificationBody(notice)}</p>
+							{#if markReadErrorById[notice.id]}
+								<p class="mt-1 text-xs text-error">{markReadErrorById[notice.id]}</p>
+							{/if}
 
 							<div class="mt-2 flex items-center gap-3 text-xs opacity-70">
 								<span>{new Date(notice.created).toLocaleString()}</span>

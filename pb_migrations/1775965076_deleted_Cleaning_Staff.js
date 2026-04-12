@@ -1,6 +1,6 @@
 /// <reference path="../pb_data/types.d.ts" />
 migrate((app) => {
-  const collection = app.findCollectionByNameOrId("pbc_2190056601");
+  const collection = app.findCollectionByNameOrId("pbc_1923202376");
 
   return app.delete(collection);
 }, (app) => {
@@ -23,10 +23,10 @@ migrate((app) => {
         "type": "text"
       }
     ],
-    "id": "pbc_2190056601",
+    "id": "pbc_1923202376",
     "indexes": [],
     "listRule": null,
-    "name": "Admin",
+    "name": "Cleaning_Staff",
     "system": false,
     "type": "base",
     "updateRule": null,

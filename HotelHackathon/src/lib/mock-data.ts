@@ -43,6 +43,7 @@ export type AppNotification = {
 	created: string;
 	room: string;
 	user: string;
+	read: boolean;
 	expand?: {
 		room: Room;
 		user: User;
@@ -138,6 +139,22 @@ export const getHomeSnapshot = async (user: { id?: string; email?: string; role?
 	}
 };
 
+const sendNotificationToCleaners = async (roomId: string) => {
+	const cleaners = await pb.collection('users').getFullList({
+		filter: 'role = "Cleaner"'
+	});
+	console.log('Cleaners to notify:', cleaners);
+	const room = await getRoomById(roomId);
+	cleaners.forEach(async (cleaner) => {
+		await pb.collection('Notification').create({
+			Title: 'Room Ready for Cleaning',
+			Body: `Room ${room.Room_Number} in ${room.Location} is ready for cleaning. Please attend to it as soon as possible.`,
+			room: roomId,
+			notification_user: cleaner.id
+		});
+	});
+}
+
 export const getRoomById = async (roomId: string): Promise<Room> => {
 	const room = await pb.collection<Room>('Room').getOne(roomId);
 	return room as Room;
@@ -192,6 +209,7 @@ export const requestRoomCleaning = async (roomId: string): Promise<Room> => {
 	const updatedRoom = await pb.collection<Room>('Room').update(roomId, {
 		Status: 'Ready For Cleaning'
 	});
+	sendNotificationToCleaners(roomId);
 	return updatedRoom as Room;
 }
 
@@ -203,36 +221,60 @@ export const markRoomCleanedAndOccupied = async (roomId: string): Promise<Room> 
 }
 
 export const getNotificationsForUser = async (userId: string) => {
-	try {
-		return await pb.collection<AppNotification>('Notification').getFullList({
-			filter: `notification_user = "${userId}"`,
-			sort: '-created'
-		});
-	} catch {
+	const filters = [
+		`notification_user = "${userId}" && read = false`,
+	];
+
+	let lastError: unknown;
+	for (const filter of filters) {
 		try {
 			return await pb.collection<AppNotification>('Notification').getFullList({
-				filter: `user = "${userId}"`,
+				filter,
 				sort: '-created'
 			});
-		} catch {
-			const allNotifications = await pb.collection<AppNotification>('Notification').getFullList({
-				sort: '-created'
-			});
-			return allNotifications.filter((notice) => {
-				const candidateUser = (notice as { notification_user?: string; user?: string }).notification_user ||
-					(notice as { notification_user?: string; user?: string }).user;
-				return candidateUser === userId;
-			});
+		} catch (error) {
+			lastError = error;
 		}
 	}
+
+	throw lastError instanceof Error ? lastError : new Error('Failed to load unread notifications.');
 }
 
 export const getAllNotifications = async () => {
-	const notifications = await pb.collection<AppNotification>('Notification').getFullList({
-		sort: '-created',
-		expand: 'user'
-	});
-	return notifications;
+	const filters = ['read = false', 'Read = false', 'notification_read = false'];
+
+	let lastError: unknown;
+	for (const filter of filters) {
+		try {
+			return await pb.collection<AppNotification>('Notification').getFullList({
+				filter,
+				sort: '-created',
+				expand: 'user'
+			});
+		} catch (error) {
+			lastError = error;
+		}
+	}
+
+	throw lastError instanceof Error ? lastError : new Error('Failed to load unread notifications.');
+}
+
+export const markNotificationRead = async (notificationId: string): Promise<AppNotification> => {
+	try {
+		return (await pb.collection<AppNotification>('Notification').update(notificationId, {
+			read: true
+		})) as AppNotification;
+	} catch {
+		try {
+			return (await pb.collection<AppNotification>('Notification').update(notificationId, {
+				Read: true
+			})) as AppNotification;
+		} catch {
+			return (await pb.collection<AppNotification>('Notification').update(notificationId, {
+				notification_read: true
+			})) as AppNotification;
+		}
+	}
 }
 
 export const getStaffSnapshot = async () => {
