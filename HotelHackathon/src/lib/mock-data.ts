@@ -118,6 +118,7 @@ export const getHomeSnapshot = async (user: { id?: string; email?: string; role?
 			}
 			: null
 	);
+	const currentUserId = user?.id || pb.authStore.record?.id;
 
 	if(role === 'cleaner') {
 		const rooms: Room[] = await pb.collection('Room').getFullList({
@@ -126,10 +127,28 @@ export const getHomeSnapshot = async (user: { id?: string; email?: string; role?
 		});
 		return rooms;
 	}else{
-		const roomkeys: Roomkey[] = await pb.collection('Roomkey').getFullList({
-			filter: `user = "${pb.authStore.record?.id}"`,
-			expand: 'room',
-		});
+		if (!currentUserId) return [];
+
+		let roomkeys: Roomkey[] = [];
+		try {
+			roomkeys = await pb.collection('Roomkey').getFullList({
+				filter: `user = "${currentUserId}"`,
+				expand: 'room'
+			});
+		} catch {
+			try {
+				roomkeys = await pb.collection('Roomkey').getFullList({
+					filter: `roomkey_user = "${currentUserId}"`,
+					expand: 'room'
+				});
+			} catch {
+				roomkeys = await pb.collection('Roomkey').getFullList({
+					filter: `roomkey_customer = "${currentUserId}"`,
+					expand: 'room'
+				});
+			}
+		}
+
 		const rooms = roomkeys.map((rk) => {
 			if (rk.expand && rk.expand.room) {
 				return rk.expand!.room;
@@ -155,6 +174,20 @@ export const unlockRoom = async (roomId: string): Promise<Room> => {
 export const lockRoom = async (roomId: string): Promise<Room> => {
 	const updatedRoom = await pb.collection<Room>('Room').update(roomId, {
 		Unlocked: false
+	});
+	return updatedRoom as Room;
+}
+
+export const requestRoomCleaning = async (roomId: string): Promise<Room> => {
+	const updatedRoom = await pb.collection<Room>('Room').update(roomId, {
+		Status: 'Ready For Cleaning'
+	});
+	return updatedRoom as Room;
+}
+
+export const markRoomCleanedAndOccupied = async (roomId: string): Promise<Room> => {
+	const updatedRoom = await pb.collection<Room>('Room').update(roomId, {
+		Status: 'Occupied'
 	});
 	return updatedRoom as Room;
 }

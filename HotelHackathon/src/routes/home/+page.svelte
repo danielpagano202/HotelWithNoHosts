@@ -6,9 +6,8 @@
 
 	const displayName = $derived(getDisplayName($authUser));
 	const role = $derived(inferRole($authUser));
-	const isCustomer = $derived(
-		$authUser && typeof $authUser.role === 'string' && $authUser.role.toLowerCase().trim() === 'customer'
-	);
+	const canUseHelp = $derived(role === 'guest' || role === 'customer');
+	const isGuestView = $derived(role === 'guest' || role === 'customer');
 
 	let rooms = $state<Awaited<ReturnType<typeof getHomeSnapshot>>>([]);
 	let primaryRoom = $state<Awaited<ReturnType<typeof getRoomById>> | null>(null);
@@ -34,7 +33,7 @@
 		loadError = '';
 
 		try {
-			if (role === 'cleaner') {
+			if (role === 'cleaner' || role === 'guest' || role === 'customer') {
 				const snapshotUser = $authUser
 					? {
 						id: $authUser.id,
@@ -92,11 +91,15 @@
 		<div>
 			<h1 class="text-4xl font-bold">Welcome, {displayName}</h1>
 			<p class="text-base-content/70">
-				{role === 'cleaner' ? 'Focus on ready-for-cleaning rooms and complete tasks quickly.' : 'Here are the latest app notifications.'}
+				{role === 'cleaner'
+					? 'Focus on ready-for-cleaning rooms and complete tasks quickly.'
+					: isGuestView
+						? 'Here are your room reservations and notifications.'
+						: 'Here are the latest app notifications.'}
 			</p>
 		</div>
 		<div class="flex gap-2">
-			{#if isCustomer}
+			{#if canUseHelp}
 				<a class="btn btn-outline" href="/help">Ask AI Host</a>
 			{/if}
 		</div>
@@ -146,6 +149,56 @@
 						</ul>
 					{:else}
 						<p class="opacity-70">No rooms available for your role.</p>
+					{/if}
+				</div>
+			</article>
+		</div>
+	{/if}
+
+	{#if isGuestView}
+		<div class="grid gap-4 lg:grid-cols-2">
+			<article class="card border border-base-300/60 bg-base-100/85 shadow-md">
+				<div class="card-body">
+					<h2 class="card-title">My primary reservation</h2>
+					{#if loading}
+						<p class="opacity-70">Loading reservation...</p>
+					{:else if loadError}
+						<div class="alert alert-error text-sm">{loadError}</div>
+					{:else if primaryRoom}
+						<p class="text-lg font-semibold">Room {primaryRoom.Room_Number}</p>
+						<p class="text-sm opacity-70">Location: {primaryRoom.Location}</p>
+						<p class="text-sm opacity-70">Beds: {primaryRoom.num_beds}</p>
+						<p class="text-sm opacity-70">Status: {primaryRoom.Status}</p>
+						<div class="card-actions justify-end">
+							<a class="btn btn-primary btn-sm" href={`/room/${primaryRoom.id}`}>View room</a>
+						</div>
+					{:else}
+						<p class="opacity-70">No reservation room found for your account.</p>
+					{/if}
+				</div>
+			</article>
+
+			<article class="card border border-base-300/60 bg-base-100/85 shadow-md">
+				<div class="card-body">
+					<h2 class="card-title">My reserved rooms</h2>
+					{#if loading}
+						<p class="opacity-70">Loading reservations...</p>
+					{:else if loadError}
+						<div class="alert alert-error text-sm">{loadError}</div>
+					{:else if rooms.length > 0}
+						<ul class="space-y-2">
+							{#each rooms as room}
+								<li class="flex items-center justify-between rounded-lg bg-base-200/70 p-3">
+									<div>
+										<p class="font-medium">Room {room.Room_Number}</p>
+										<p class="text-xs opacity-70">{room.Location} - {room.Status}</p>
+									</div>
+									<a class="btn btn-xs btn-outline" href={`/room/${room.id}`}>Open</a>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						<p class="opacity-70">No rooms reserved yet for your account.</p>
 					{/if}
 				</div>
 			</article>

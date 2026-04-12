@@ -7,9 +7,8 @@
 
 	let { children } = $props();
 	const role = $derived(inferRole($authUser));
-	const isCustomer = $derived(
-		$authUser && typeof $authUser.role === 'string' && $authUser.role.toLowerCase().trim() === 'customer'
-	);
+	const canUseHelp = $derived($isAuthenticated && (role === 'guest' || role === 'customer'));
+	const canBook = $derived(!$isAuthenticated || role === 'guest' || role === 'customer');
 
 	onMount(() => {
 		const unsub = isAuthenticated.subscribe(() => {
@@ -49,10 +48,12 @@
 				<div class="navbar-center hidden lg:flex">
 					<ul class="menu menu-horizontal gap-1 px-1">
 						<li><a href="/home">Home</a></li>
-						{#if $isAuthenticated && isCustomer}
+						{#if canUseHelp}
 							<li><a href="/help">Help</a></li>
 						{/if}
-						<li><a href="/book">Book</a></li>
+						{#if canBook}
+							<li><a href="/booking">Book</a></li>
+						{/if}
 						{#if $isAuthenticated && role === 'staff'}
 							<li><a href="/admin">Staff</a></li>
 						{/if}

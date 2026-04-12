@@ -38,7 +38,8 @@ export const register = async (payload: {
 		password: payload.password,
 		passwordConfirm: payload.passwordConfirm,
 		emailVisibility: true,
-		name: payload.name
+		name: payload.name,
+		role: 'Guest'
 	});
 
 	return login(payload.email, payload.password);
@@ -60,6 +61,7 @@ export const inferRole = (user: AuthUser | null): 'guest' | 'customer' | 'cleane
 	if (!user) return 'guest';
 
 	const normalizedRole = typeof user.role === 'string' ? user.role.toLowerCase().trim() : '';
+	if (normalizedRole === 'guest') return 'guest';
 	if (normalizedRole === 'customer') return 'customer';
 	if (normalizedRole === 'cleaner') return 'cleaner';
 	if (normalizedRole === 'staff' || normalizedRole === 'admin') return 'staff';
@@ -69,7 +71,7 @@ export const inferRole = (user: AuthUser | null): 'guest' | 'customer' | 'cleane
 	const email = user.email.toLowerCase();
 	if (email.includes('admin') || email.includes('staff')) return 'staff';
 	if (email.includes('clean')) return 'cleaner';
-	return 'customer';
+	return 'guest';
 };
 
 if (browser) {

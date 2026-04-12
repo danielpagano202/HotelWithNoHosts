@@ -52,6 +52,9 @@
 		}
 	};
 
+	const getEscalationUserId = (issue: StaffSnapshot['escalationNotifications'][number]) =>
+		issue.user || issue.expand?.user?.id || '';
+
 	onMount(async () => {
 		if (!$isAuthenticated) {
 			await goto('/login');
@@ -128,6 +131,11 @@
 							<div class="flex flex-wrap items-center justify-between gap-2">
 								<p class="font-semibold">{issue.content}</p>
 								<div class="flex items-center gap-2">
+									{#if getEscalationUserId(issue)}
+										<a class="btn btn-outline btn-xs" href={`/admin/user/${getEscalationUserId(issue)}`}>
+											View user
+										</a>
+									{/if}
 									<span class={`badge ${issue.severity === 'high' ? 'badge-error' : issue.severity === 'medium' ? 'badge-warning' : 'badge-info'}`}>
 										{issue.severity}
 									</span>

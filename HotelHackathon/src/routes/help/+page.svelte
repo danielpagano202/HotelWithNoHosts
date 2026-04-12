@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { getMessagesByUserId } from '$lib/mock-data';
-	import { authUser, isAuthenticated } from '$lib/stores/auth';
+	import { authUser, inferRole, isAuthenticated } from '$lib/stores/auth';
 
 	type ChatMessage = {
 		role: 'assistant' | 'user' | 'error';
@@ -70,9 +70,8 @@
 			return;
 		}
 
-		const normalizedRole =
-			typeof $authUser?.role === 'string' ? $authUser.role.toLowerCase().trim() : '';
-		if (normalizedRole !== 'customer') {
+		const role = inferRole($authUser);
+		if (role !== 'guest' && role !== 'customer') {
 			await goto('/home');
 			return;
 		}

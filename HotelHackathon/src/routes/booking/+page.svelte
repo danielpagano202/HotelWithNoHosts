@@ -1,5 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
+  import { authUser, inferRole, isAuthenticated } from '$lib/stores/auth';
 
   let guestName = $state('');
   let guestEmail = $state('');
@@ -13,6 +15,15 @@
   tomorrow.setDate(today.getDate() + 1);
   checkIn = today.toISOString().split('T')[0];
   checkOut = tomorrow.toISOString().split('T')[0];
+
+  onMount(async () => {
+    if ($isAuthenticated) {
+      const role = inferRole($authUser);
+      if (role === 'staff' || role === 'cleaner') {
+        await goto('/home');
+      }
+    }
+  });
 
   async function handleSubmit() {
     error = '';

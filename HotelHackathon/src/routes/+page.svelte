@@ -1,5 +1,12 @@
+<script lang="ts">
+	import { authUser, inferRole, isAuthenticated } from '$lib/stores/auth';
+
+	const role = $derived(inferRole($authUser));
+	const canBook = $derived(!$isAuthenticated || role === 'guest' || role === 'customer');
+</script>
+
 <section class="stagger space-y-8">
-	<div class="hero overflow-hidden rounded-[2rem] border border-base-300/50 bg-base-100/85 shadow-xl backdrop-blur-sm">
+	<div class="hero overflow-hidden rounded-4xl border border-base-300/50 bg-base-100/85 shadow-xl backdrop-blur-sm">
 		<div class="hero-content grid gap-10 py-16 lg:grid-cols-[1.1fr_0.9fr]">
 			<div class="space-y-6">
 				<p class="badge badge-secondary badge-outline">Autonomous Hospitality</p>
@@ -12,7 +19,9 @@
 					through the staff console.
 				</p>
 				<div class="flex flex-wrap gap-3">
-					<a href="/booking" class="btn btn-primary btn-lg">🔑 Book Room & Get Digital Key</a>
+					{#if canBook}
+						<a href="/booking" class="btn btn-primary btn-lg">🔑 Book Room & Get Digital Key</a>
+					{/if}
 					<a href="/login" class="btn btn-outline btn-lg">I Already Have Access</a>
 				</div>
 			</div>
@@ -64,7 +73,7 @@
 		</article>
 	</div>
 
-	<div class="rounded-[2rem] border border-base-300/50 bg-gradient-to-br from-primary/10 to-secondary/10 shadow-lg backdrop-blur-sm">
+	<div class="rounded-4xl border border-base-300/50 bg-linear-to-br from-primary/10 to-secondary/10 shadow-lg backdrop-blur-sm">
 		<div class="card-body gap-6 p-8">
 			<div class="text-center">
 				<h2 class="text-3xl font-bold mb-2">Your Digital Key Journey</h2>
@@ -95,10 +104,12 @@
 			</div>
 
 			<div class="text-center pt-4">
-				<a href="/booking" class="btn btn-primary btn-lg gap-2">
-					<span class="text-xl">🔑</span>
-					Book Your Stay Now
-				</a>
+				{#if canBook}
+					<a href="/booking" class="btn btn-primary btn-lg gap-2">
+						<span class="text-xl">🔑</span>
+						Book Your Stay Now
+					</a>
+				{/if}
 			</div>
 		</div>
 	</div>

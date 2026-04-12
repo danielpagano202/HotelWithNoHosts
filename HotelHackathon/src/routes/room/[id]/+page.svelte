@@ -2,16 +2,26 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import { getRoomById, lockRoom, unlockRoom } from '$lib/mock-data';
-	import { isAuthenticated } from '$lib/stores/auth';
+	import {
+		getRoomById,
+		lockRoom,
+		markRoomCleanedAndOccupied,
+		requestRoomCleaning,
+		unlockRoom
+	} from '$lib/mock-data';
+	import { authUser, inferRole, isAuthenticated } from '$lib/stores/auth';
 
 	const roomId = $derived($page.params.id ?? '');
+	const role = $derived(inferRole($authUser));
 	let room = $state<Awaited<ReturnType<typeof getRoomById>> | null>(null);
 	let loading = $state(true);
 	let loadError = $state('');
 	let accessActionLoading = $state(false);
 	let accessActionError = $state('');
 	let accessActionSuccess = $state('');
+	let serviceActionLoading = $state(false);
+	let serviceActionError = $state('');
+	let serviceActionSuccess = $state('');
 
 	const loadRoom = async () => {
 		loading = true;
@@ -50,6 +60,29 @@
 			accessActionError = error instanceof Error ? error.message : 'Failed to update door state.';
 		} finally {
 			accessActionLoading = false;
+		}
+	};
+
+	const handleServiceAction = async () => {
+		if (!room || serviceActionLoading) return;
+
+		serviceActionLoading = true;
+		serviceActionError = '';
+		serviceActionSuccess = '';
+
+		try {
+			if (role === 'cleaner') {
+				room = await markRoomCleanedAndOccupied(room.id);
+				serviceActionSuccess = `Room ${room.Room_Number} marked cleaned and occupied.`;
+			} else if (role === 'guest' || role === 'customer') {
+				room = await requestRoomCleaning(room.id);
+				serviceActionSuccess = `Cleaning requested for room ${room.Room_Number}.`;
+			}
+		} catch (error) {
+			serviceActionError =
+				error instanceof Error ? error.message : 'Failed to update room cleaning status.';
+		} finally {
+			serviceActionLoading = false;
 		}
 	};
 
@@ -136,6 +169,33 @@
 				{/if}
 				{#if accessActionSuccess}
 					<p class="text-xs text-success">{accessActionSuccess}</p>
+				{/if}
+
+				{#if role === 'guest' || role === 'customer' || role === 'cleaner'}
+					<div class="mt-3 w-full border-t border-base-300/60 pt-3">
+						<p class="text-xs opacity-70 mb-2">
+							{#if role === 'cleaner'}Cleaner controls{:else}Guest services{/if}
+						</p>
+						<button
+							class={`btn btn-sm w-full ${role === 'cleaner' ? 'btn-success' : 'btn-secondary'}`}
+							onclick={handleServiceAction}
+							disabled={serviceActionLoading || (role !== 'cleaner' && room.Status === 'Ready For Cleaning') || (role === 'cleaner' && room.Status === 'Occupied')}
+						>
+							{#if serviceActionLoading}
+								{#if role === 'cleaner'}Marking...{:else}Requesting...{/if}
+							{:else if role === 'cleaner'}
+								{room.Status === 'Occupied' ? 'Already Occupied' : 'Mark Cleaned and Occupied'}
+							{:else}
+								{room.Status === 'Ready For Cleaning' ? 'Cleaning Requested' : 'Request Cleaning'}
+							{/if}
+						</button>
+						{#if serviceActionError}
+							<p class="mt-2 text-xs text-error">{serviceActionError}</p>
+						{/if}
+						{#if serviceActionSuccess}
+							<p class="mt-2 text-xs text-success">{serviceActionSuccess}</p>
+						{/if}
+					</div>
 				{/if}
 			</div>
 		</article>
