@@ -101,9 +101,9 @@
 					<tbody>
 						{#each staffData.scanLogs as log}
 							<tr>
-								<td>{new Date(log.createdAt).toLocaleString()}</td>
-								<td>{log.roomNumber}</td>
-								<td>{log.userEmail}</td>
+								<td>{new Date(log.created).toLocaleString()}</td>
+								<td>{log.expand?.room?.Room_Number || 'N/A'}</td>
+								<td>{log.expand?.user?.email || 'N/A'}</td>
 								<td>
 									<span class={`badge ${log.action === 'entry' ? 'badge-success' : 'badge-neutral'}`}>
 										{log.action}
@@ -184,7 +184,7 @@
 							<td class="font-medium">{user.name || 'Guest'}</td>
 							<td class="text-sm">{user.email}</td>
 							<td>
-								<a href="/admin/user/{user.id}" class="btn btn-ghost btn-xs">View</a>
+								<a href={`/admin/user/${user.id}`} class="btn btn-ghost btn-xs">View</a>
 							</td>
 						</tr>
 					{/each}
