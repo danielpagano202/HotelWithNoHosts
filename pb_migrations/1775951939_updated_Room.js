@@ -1,19 +1,19 @@
 /// <reference path="../pb_data/types.d.ts" />
 migrate((app) => {
-  const collection = app.findCollectionByNameOrId("pbc_3905696460")
+  const collection = app.findCollectionByNameOrId("pbc_4120942869")
 
   // remove field
-  collection.fields.removeById("relation2459570760")
+  collection.fields.removeById("relation568282829")
 
   // add field
-  collection.fields.addAt(3, new Field({
+  collection.fields.addAt(4, new Field({
     "cascadeDelete": false,
     "collectionId": "_pb_users_auth_",
     "hidden": false,
-    "id": "relation2375276105",
+    "id": "relation4002888749",
     "maxSelect": 1,
     "minSelect": 0,
-    "name": "user",
+    "name": "room_user",
     "presentable": false,
     "required": false,
     "system": false,
@@ -22,17 +22,17 @@ migrate((app) => {
 
   return app.save(collection)
 }, (app) => {
-  const collection = app.findCollectionByNameOrId("pbc_3905696460")
+  const collection = app.findCollectionByNameOrId("pbc_4120942869")
 
   // add field
   collection.fields.addAt(1, new Field({
     "cascadeDelete": false,
-    "collectionId": "pbc_939635782",
+    "collectionId": "pbc_3245856272",
     "hidden": false,
-    "id": "relation2459570760",
+    "id": "relation568282829",
     "maxSelect": 1,
     "minSelect": 0,
-    "name": "customer",
+    "name": "room_customer",
     "presentable": false,
     "required": false,
     "system": false,
@@ -40,7 +40,7 @@ migrate((app) => {
   }))
 
   // remove field
-  collection.fields.removeById("relation2375276105")
+  collection.fields.removeById("relation4002888749")
 
   return app.save(collection)
 })

@@ -1,5 +1,9 @@
 /// <reference path="../pb_data/types.d.ts" />
 migrate((app) => {
+  const collection = app.findCollectionByNameOrId("pbc_3245856272");
+
+  return app.delete(collection);
+}, (app) => {
   const collection = new Collection({
     "createRule": null,
     "deleteRule": null,
@@ -19,47 +23,23 @@ migrate((app) => {
         "type": "text"
       },
       {
-        "hidden": false,
-        "id": "date3133418153",
-        "max": "",
-        "min": "",
-        "name": "sent",
-        "presentable": false,
-        "required": false,
-        "system": false,
-        "type": "date"
-      },
-      {
         "cascadeDelete": false,
-        "collectionId": "pbc_939635782",
+        "collectionId": "_pb_users_auth_",
         "hidden": false,
-        "id": "relation2459570760",
+        "id": "relation2375276105",
         "maxSelect": 1,
         "minSelect": 0,
-        "name": "customer_noti",
+        "name": "customer_ID",
         "presentable": false,
-        "required": false,
-        "system": false,
-        "type": "relation"
-      },
-      {
-        "cascadeDelete": false,
-        "collectionId": "pbc_2190056601",
-        "hidden": false,
-        "id": "relation2114104832",
-        "maxSelect": 1,
-        "minSelect": 0,
-        "name": "admin_not",
-        "presentable": false,
-        "required": false,
+        "required": true,
         "system": false,
         "type": "relation"
       }
     ],
-    "id": "pbc_3905696460",
+    "id": "pbc_3245856272",
     "indexes": [],
     "listRule": null,
-    "name": "notification",
+    "name": "Customer",
     "system": false,
     "type": "base",
     "updateRule": null,
@@ -67,8 +47,4 @@ migrate((app) => {
   });
 
   return app.save(collection);
-}, (app) => {
-  const collection = app.findCollectionByNameOrId("pbc_3905696460");
-
-  return app.delete(collection);
 })
