@@ -1,7 +1,7 @@
 import { inferRole } from '$lib/stores/auth';
 import { pb } from './pocketbase';
 
-type RoomStatus = 'occupied' | 'ready' | 'needs_cleaning';
+type RoomStatus = 'Occupied' | 'Vacant' | 'Ready For Cleaning';
 
 export type User = {
 	id: string;
@@ -19,13 +19,11 @@ export type Message = {
 
 export type Room = {
 	id: string;
-	number: string;
-	floor: number;
-	status: RoomStatus;
-	guestName?: string;
-	checkInAt: string;
-	checkOutAt: string;
-	accessCode: string;
+	Location: string;
+	num_beds: number;
+	Status: RoomStatus;
+	Room_Number: number;
+	Unlocked: boolean;
 };
 
 export type Reservation = {
@@ -53,6 +51,15 @@ export type ScanLog = {
 	createdAt: string;
 };
 
+export type Roomkey = {
+	id: string;
+	user: string;
+	room: string;
+	expand?: {
+		room: Room;
+	}
+}
+
 export type EscalationNotification = {
 	id: string;
 	user: string;
@@ -65,37 +72,6 @@ export type EscalationNotification = {
 		user: User;
 	}
 };
-
-const rooms: Room[] = [
-	{
-		id: 'r-410',
-		number: '410',
-		floor: 4,
-		status: 'occupied',
-		guestName: 'Tori Hayes',
-		checkInAt: '2026-04-11T14:00:00Z',
-		checkOutAt: '2026-04-14T11:00:00Z',
-		accessCode: 'SCAN-410-9D2K'
-	},
-	{
-		id: 'r-312',
-		number: '312',
-		floor: 3,
-		status: 'needs_cleaning',
-		checkInAt: '2026-04-11T10:30:00Z',
-		checkOutAt: '2026-04-12T11:00:00Z',
-		accessCode: 'SCAN-312-4MQA'
-	},
-	{
-		id: 'r-205',
-		number: '205',
-		floor: 2,
-		status: 'ready',
-		checkInAt: '2026-04-12T15:00:00Z',
-		checkOutAt: '2026-04-15T11:00:00Z',
-		accessCode: 'SCAN-205-7LVP'
-	}
-];
 
 const notifications: AppNotification[] = [
 	{
@@ -147,17 +123,48 @@ const reservations: Reservation[] = [
 
 let messages: Message[] = [];
 
-export const getHomeSnapshot = (user: { email?: string } | null) => {
+export const getHomeSnapshot = async (user: { email?: string } | null) => {
 	const role = inferRole(user ? { id: 'local', email: user.email || '' } : null);
 
-	return {
-		myRoom: rooms[0],
-		roomsToClean: role === 'cleaner' ? rooms.filter((room) => room.status === 'needs_cleaning') : [],
-		notifications
-	};
+	if(role === 'cleaner') {
+		const rooms: Room[] = await pb.collection('Room').getFullList({
+			sort: 'Room_Number',
+			filter: 'status = "Ready For Cleaning"'
+		});
+		return rooms;
+	}else{
+		const roomkeys: Roomkey[] = await pb.collection('Roomkey').getFullList({
+			filter: `user = "${pb.authStore.record?.id}"`,
+			expand: 'room',
+		});
+		const rooms = roomkeys.map((rk) => {
+			if (rk.expand && rk.expand.room) {
+				return rk.expand!.room;
+			}
+			return null;
+		}).filter((room): room is Room => room !== null);
+		return rooms;
+	}
 };
 
-export const getRoomById = (roomId: string) => rooms.find((room) => room.id === roomId);
+export const getRoomById = async (roomId: string): Promise<Room> => {
+	const room = await pb.collection<Room>('Room').getOne(roomId);
+	return room as Room;
+}
+
+export const unlockRoom = async (roomId: string): Promise<Room> => {
+	const updatedRoom = await pb.collection<Room>('Room').update(roomId, {
+		Unlocked: true
+	});
+	return updatedRoom as Room;
+}
+
+export const lockRoom = async (roomId: string): Promise<Room> => {
+	const updatedRoom = await pb.collection<Room>('Room').update(roomId, {
+		Unlocked: false
+	});
+	return updatedRoom as Room;
+}
 
 export const getAdminSnapshot = async () => {
 	const escalationNotifications = await pb.collection('EscalationNotifications').getFullList({
