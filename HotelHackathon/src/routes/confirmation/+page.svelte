@@ -1,11 +1,7 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import type { PageData } from './$types';
 
-  const name           = $derived($page.url.searchParams.get('name') ?? '');
-  const code           = $derived($page.url.searchParams.get('code') ?? '');
-  const checkIn        = $derived($page.url.searchParams.get('checkIn') ?? '');
-  const checkOut       = $derived($page.url.searchParams.get('checkOut') ?? '');
-  const addToWalletLink = $derived($page.url.searchParams.get('addToWalletLink') ?? '');
+  const { name, code, checkIn, checkOut, addToWalletLink } = $props();
 
   const fmt = (d: string) =>
     d ? new Date(d).toLocaleDateString('en-US', {

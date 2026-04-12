@@ -14,12 +14,6 @@ const BASE_URL              = process.env.BASE_URL ?? 'https://your-hotel.com';
 const ROOMS = ['101', '102', '203', '204', '305', '306', '401', '402'];
 let roomIdx = 0;
 
-function assignRoom() {
-  const room = ROOMS[roomIdx % ROOMS.length];
-  roomIdx++;
-  return room;
-}
-
 function generateConfirmationCode() {
   return 'HTL-' + Math.random().toString(36).toUpperCase().slice(2, 8);
 }
@@ -77,35 +71,87 @@ function buildAddToWalletLink({ confirmationCode, guestName, room, checkIn, chec
 export const POST: RequestHandler = async ({ request }) => {
   try {
     const { guestName, guestEmail, checkIn, checkOut, userId, roomId } = await request.json();
+    console.log('Received request data:', { guestName, guestEmail, checkIn, checkOut, userId, roomId });
 
-    if (!guestName || !guestEmail || !checkIn || !checkOut) {
-      return json({ error: 'Missing required fields.' }, { status: 400 });
+    if (!guestName || !guestEmail || !checkIn || !checkOut || !userId || !roomId) {
+      return json({ error: 'Missing required fields: guestName, guestEmail, checkIn, checkOut, userId, roomId.' }, { status: 400 });
     }
 
-    const confirmationCode = generateConfirmationCode();
-    const room = assignRoom();
+    // Verify the selected room is available
+    try {
+      const room = await pb.collection('Room').getOne(roomId);
+      if (room.Status === 'Occupied') {
+        return json({ error: 'Selected room is no longer available. Please choose another room.' }, { status: 400 });
+      }
+      console.log('Selected room is available:', room);
+    } catch (err) {
+      console.error('Error checking room availability:', err);
+      return json({ error: 'Selected room not found.' }, { status: 400 });
+    }
+
     const addToWalletLink = '';
       //  buildAddToWalletLink({ confirmationCode, guestName, room, checkIn, checkOut });
 
 
 // Save to PocketBase
-await pb.collection('Reservation').create({
-  check_in: checkIn,
-  check_out: checkOut,
-  reservation_users: userId,
-  reservation_roomkey: roomId,
-});
+let roomKey: any;
+let confirmationCode: string;
+
+console.log('Creating roomkey with user:', userId, 'and room:', roomId);
+try {
+  roomKey = await pb.collection('Roomkey').create({
+    user: userId,
+    room: roomId,
+  });
+  console.log('✅ Roomkey created successfully with ID:', roomKey.id);
+} catch (err: any) {
+  console.error('❌ Roomkey creation failed:', err.message);
+  console.error('Roomkey error details:', err.response?.data);
+  throw err;
+}
+
+// Update room status to Occupied and set room_user
+console.log('Updating room with user:', userId, 'and status: Occupied');
+try {
+  const updatedRoom = await pb.collection('Room').update(roomId, {
+    Status: 'Occupied',
+    room_user: userId
+  });
+  console.log('✅ Room updated successfully:', updatedRoom);
+} catch (err: any) {
+  console.error('❌ Room update failed:', err.message);
+  console.error('Room update error details:', err.response?.data);
+  throw err;
+}
+
+// Create reservation
+console.log('Creating reservation with user:', userId, 'and roomkey:', roomKey.id);
+try {
+  const newReservation = await pb.collection('Reservation').create({
+    check_in: checkIn,
+    check_out: checkOut,
+    reservation_users: userId,
+    reservation_roomkey: roomKey.id
+  });
+  console.log('✅ Reservation created successfully with ID:', newReservation.id);
+  confirmationCode = newReservation.id;
+} catch (err: any) {
+  console.error('❌ Reservation creation failed:', err.message);
+  console.error('Reservation error details:', err.response?.data);
+  throw err;
+}
+
 
 // Send confirmation email
-await sendBookingConfirmation(guestEmail, { 
-  customerName: guestName, 
-  checkIn, 
-  checkOut, 
-  roomId: room, 
-  bookingId: confirmationCode 
+await sendBookingConfirmation(guestEmail, {
+  customerName: guestName,
+  checkIn,
+  checkOut,
+  roomId: roomId,
+  bookingId: confirmationCode
 });
 
-return json({ confirmationCode, room, addToWalletLink }, { status: 201 });
+return json({ confirmationCode, room: roomId, addToWalletLink }, { status: 201 });
   } catch (err) {
     console.error(err);
     return json({ error: 'Internal server error.' }, { status: 500 });

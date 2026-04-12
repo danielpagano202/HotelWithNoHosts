@@ -7,6 +7,8 @@
   let guestEmail = $state('');
   let checkIn = $state('');
   let checkOut = $state('');
+  let selectedRoom = $state('');
+  let availableRooms = $state([] as Array<{id: string, roomNumber: string, location: string, numBeds: number}>);
   let loading = $state(false);
   let error = $state('');
 
@@ -23,24 +25,47 @@
         await goto('/home');
       }
     }
+
+    // Fetch available rooms
+    try {
+      const response = await fetch('/api/rooms');
+      if (response.ok) {
+        availableRooms = await response.json();
+      } else {
+        console.error('Failed to fetch rooms');
+      }
+    } catch (err) {
+      console.error('Error fetching rooms:', err);
+    }
   });
 
   async function handleSubmit() {
     error = '';
-    if (!guestName || !guestEmail || !checkIn || !checkOut) {
-      error = 'Please fill in all fields.';
+    if (!guestName || !guestEmail || !checkIn || !checkOut || !selectedRoom) {
+      error = 'Please fill in all fields and select a room.';
       return;
     }
 
     loading = true;
     try {
+      const userId = $authUser?.id;
+      console.log("works", userId);
+      if (!userId) {
+        error = 'You must be logged in to make a reservation.';
+        return;
+      }
+
+      console.log('Making reservation request with:', { guestName, guestEmail, checkIn, checkOut, userId, roomId: selectedRoom });
+
       const res = await fetch('/api/reservation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guestName, guestEmail, checkIn, checkOut }),
+        body: JSON.stringify({ guestName, guestEmail, checkIn, checkOut, userId, roomId: selectedRoom }),
       });
 
+      console.log('Reservation response status:', res.status);
       const data = await res.json();
+      console.log('Reservation response data:', data);
       if (!res.ok) throw new Error(data.error || 'Something went wrong.');
 
       const params = new URLSearchParams({
@@ -120,6 +145,18 @@
         <label class="label label-text font-medium" for="checkout">Check-out</label>
         <input id="checkout" type="date" class="input input-bordered w-full" bind:value={checkOut} />
       </div>
+    </div>
+
+    <div class="form-control gap-1">
+      <label class="label label-text font-medium" for="room">Select Room</label>
+      <select id="room" class="select select-bordered w-full" bind:value={selectedRoom}>
+        <option value="">Choose a room...</option>
+        {#each availableRooms as room}
+          <option value={room.id}>
+            Room {room.roomNumber} - {room.location} ({room.numBeds} bed{room.numBeds > 1 ? 's' : ''})
+          </option>
+        {/each}
+      </select>
     </div>
 
     <div class="card-actions pt-2">
