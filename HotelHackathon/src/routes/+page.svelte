@@ -20,7 +20,7 @@
 				</p>
 				<div class="flex flex-wrap gap-3">
 					{#if canBook}
-						<a href="/booking" class="btn btn-primary btn-lg">🔑 Book Room & Get Digital Key</a>
+						<a href="/reserve" class="btn btn-primary btn-lg">🔑 Reserve Room </a>
 					{/if}
 					<a href="/login" class="btn btn-outline btn-lg">I Already Have Access</a>
 				</div>

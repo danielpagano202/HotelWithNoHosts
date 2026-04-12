@@ -38,7 +38,7 @@
 			await loadThread(params.user_id);
 		} catch (error) {
 			pageError = error instanceof Error ? error.message : 'Could not load user conversation.';
-			await goto('/admin');
+				await goto('/admin');
 		} finally {
 			loadingPage = false;
 		}

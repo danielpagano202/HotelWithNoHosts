@@ -51,10 +51,14 @@ export type AppNotification = {
 
 export type ScanLog = {
 	id: string;
-	roomNumber: string;
-	userEmail: string;
+	room: string
+	user: string;
 	action: 'entry' | 'exit';
-	createdAt: string;
+	created: string;
+	expand?: {
+		room: Room;
+		user: User;
+	}
 };
 
 export type Roomkey = {
@@ -80,31 +84,6 @@ export type EscalationNotification = {
 };
 
 
-
-const scanLogs: ScanLog[] = [
-	{ id: 's-1', roomNumber: '410', userEmail: 'tori@example.com', action: 'entry', createdAt: '2026-04-11T14:03:21Z' },
-	{ id: 's-2', roomNumber: '410', userEmail: 'tori@example.com', action: 'exit', createdAt: '2026-04-11T18:11:13Z' },
-	{ id: 's-3', roomNumber: '312', userEmail: 'cleaner@hotel.com', action: 'entry', createdAt: '2026-04-11T17:08:42Z' }
-];
-
-const reservations: Reservation[] = [
-	{
-		id: 'res-1',
-		userId: 'u-1',
-		guestName: 'Tori Hayes',
-		checkInAt: '2026-04-11T14:00:00Z',
-		checkOutAt: '2026-04-14T11:00:00Z',
-		roomId: 'r-410'
-	},
-	{
-		id: 'res-2',
-		userId: 'u-2',
-		guestName: 'Mike Patel',
-		checkInAt: '2026-04-12T15:00:00Z',
-		checkOutAt: '2026-04-15T11:00:00Z',
-		roomId: 'r-205'
-	}
-];
 
 let messages: Message[] = [];
 
@@ -164,10 +143,40 @@ export const getRoomById = async (roomId: string): Promise<Room> => {
 	return room as Room;
 }
 
+const createScanLog = async (roomId: string, action: 'entry' | 'exit', userId?: string) => {
+	const actorId = userId || pb.authStore.record?.id;
+	if (!actorId) return;
+
+	try {
+		await pb.collection('Logs').create({
+			room: roomId,
+			user: actorId,
+			action
+		});
+		return;
+	} catch {
+		try {
+			await pb.collection('Logs').create({
+				room: roomId,
+				Log_user: actorId,
+				action
+			});
+			return;
+		} catch {
+			await pb.collection('Logs').create({
+				room: roomId,
+				Log_User: actorId,
+				action
+			});
+		}
+	}
+}
+
 export const unlockRoom = async (roomId: string): Promise<Room> => {
 	const updatedRoom = await pb.collection<Room>('Room').update(roomId, {
 		Unlocked: true
 	});
+	await createScanLog(roomId, 'entry');
 	return updatedRoom as Room;
 }
 
@@ -175,6 +184,7 @@ export const lockRoom = async (roomId: string): Promise<Room> => {
 	const updatedRoom = await pb.collection<Room>('Room').update(roomId, {
 		Unlocked: false
 	});
+	await createScanLog(roomId, 'exit');
 	return updatedRoom as Room;
 }
 
@@ -231,6 +241,10 @@ export const getStaffSnapshot = async () => {
 		filter: 'resolved = false',
 		expand: 'user'
 	});
+	const scanLogs = await pb.collection('Logs').getFullList({
+		sort: '-created',
+		expand: 'room,user'
+	});
 	return {
 		scanLogs,
 		escalationNotifications
@@ -247,9 +261,11 @@ export const getUserById = async (userId: string) => {
 };
 
 export const getAllUsers = async () => {
-	return pb.collection<User>('users').getFullList({
+	const usersToReturn = await pb.collection<User>('users').getFullList({
 		sort: 'email'
 	});
+	console.log('Fetched users:', await usersToReturn);
+	return usersToReturn;
 };
 
 export const getMessagesByUserId = async (userId: string) => {
