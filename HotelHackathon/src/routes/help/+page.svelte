@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { addMessageForUser, getMessagesByUserId } from '$lib/mock-data';
+	import { getMessagesByUserId } from '$lib/mock-data';
 	import { authUser, isAuthenticated } from '$lib/stores/auth';
 
 	type ChatMessage = {
@@ -96,9 +96,6 @@
 		prompt = '';
 
 		const userId = $authUser?.id;
-		if (userId) {
-			await addMessageForUser(userId, 'User', message);
-		}
 
 		try {
 			const response = await fetch('/api/gemini', {
@@ -120,10 +117,6 @@
 
 			const reply = data?.reply ?? 'I could not generate a response.';
 			appendMessage({ role: 'assistant', sender: 'AI', content: reply });
-
-			if (userId) {
-				await addMessageForUser(userId, 'AI', reply);
-			}
 		} catch (error) {
 			const fallbackMessage = error instanceof Error ? error.message : 'The AI host request failed.';
 			errorMessage = fallbackMessage;

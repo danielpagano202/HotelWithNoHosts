@@ -136,6 +136,12 @@
 								</div>
 							</div>
 							<p class="mt-1 text-sm opacity-80">User: {issue.expand?.user?.name || issue.user}</p>
+							{#if issue.reference_message}
+								<div class="mt-2 rounded-lg border border-base-300/60 bg-base-100/70 p-3">
+									<p class="text-[11px] font-semibold uppercase tracking-wide opacity-60">Reference message</p>
+									<p class="mt-1 text-sm whitespace-pre-wrap">{issue.reference_message}</p>
+								</div>
+							{/if}
 							<p class="mt-1 text-xs opacity-60">
 								{new Date(issue.created).toLocaleString()} - {issue.resolved ? 'resolved' : 'open'}
 							</p>
