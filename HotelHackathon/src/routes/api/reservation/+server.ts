@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import jwt from 'jsonwebtoken';
+import { sendBookingConfirmation } from '$lib/mailer.js';
 
 const ISSUER_ID             = process.env.GOOGLE_WALLET_ISSUER_ID ?? '';
 const SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_WALLET_SA_EMAIL ?? '';
@@ -82,14 +83,14 @@ export const POST: RequestHandler = async ({ request }) => {
 
     const confirmationCode = generateConfirmationCode();
     const room = assignRoom();
-    const addToWalletLink = buildAddToWalletLink({ confirmationCode, guestName, room, checkIn, checkOut });
+    const addToWalletLink = '';
+	  //  buildAddToWalletLink({ confirmationCode, guestName, room, checkIn, checkOut });
 
     // TODO: Save to PocketBase
     // await pb.collection('reservations').create({ guestName, guestEmail, confirmationCode, room, checkIn, checkOut });
 
     // TODO: Send confirmation email
-    // await sendConfirmationEmail({ guestName, guestEmail, confirmationCode, room, checkIn, checkOut, addToWalletLink });
-
+	await sendBookingConfirmation(guestEmail, { customerName: guestName, checkIn, checkOut, roomId: room, bookingId: confirmationCode });
     return json({ confirmationCode, room, addToWalletLink }, { status: 201 });
   } catch (err) {
     console.error(err);
