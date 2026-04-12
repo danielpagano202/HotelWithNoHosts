@@ -151,6 +151,23 @@ await sendBookingConfirmation(guestEmail, {
   bookingId: confirmationCode
 });
 
+// Create notification record
+console.log('Creating notification for user:', userId);
+try {
+  const notification = await pb.collection('Notification').create({
+    Title: 'Reservation Confirmed',
+    Body: `Your reservation has been confirmed! Booking ID: #${confirmationCode}, Room: ${roomId}, Check-in: ${checkIn}, Check-out: ${checkOut}`,
+    notification_user: userId,
+    room: roomId,
+    read: false
+  });
+  console.log('✅ Notification created successfully with ID:', notification.id);
+} catch (err: any) {
+  console.error('❌ Notification creation failed:', err.message);
+  console.error('Notification error details:', err.response?.data);
+  // Don't throw here - notification failure shouldn't break the reservation
+}
+
 return json({ confirmationCode, room: roomId, addToWalletLink }, { status: 201 });
   } catch (err) {
     console.error(err);

@@ -17,6 +17,8 @@ export const GET: RequestHandler = async ({ params }) => {
       });
 
     console.log('Reservation found:', JSON.stringify(reservation, null, 2));
+    console.log('Reservation expand data:', reservation.expand);
+    console.log('Reservation reservation_users field:', reservation.reservation_users);
 
     if (!reservation) {
       console.log('No reservation found');
@@ -24,8 +26,28 @@ export const GET: RequestHandler = async ({ params }) => {
     }
 
     // Get customer name from expanded relation or directly
-    const customerName = reservation.expand?.reservation_users?.name || 'Guest';
-    console.log('Customer name:', customerName);
+    let userData = reservation.expand?.reservation_users;
+    if (!userData && reservation.reservation_users) {
+      console.log('Expand failed, fetching user directly...');
+      // Try different collection names
+      const collectionNames = ['_pb_users_auth_', 'users', 'User'];
+      for (const collectionName of collectionNames) {
+        try {
+          console.log(`Trying collection: ${collectionName}`);
+          userData = await pb.collection(collectionName).getOne(reservation.reservation_users);
+          console.log(`User found in ${collectionName}:`, userData);
+          break; // Stop trying other collections if successful
+        } catch (directFetchError) {
+          console.log(`Collection ${collectionName} failed:`, directFetchError.message);
+        }
+      }
+    }
+
+    console.log('Final user data:', userData);
+    console.log('User data fields:', userData ? Object.keys(userData) : 'No user data');
+
+    const customerName = userData?.name || userData?.username || userData?.email || 'Guest';
+    console.log('Customer name extracted:', customerName);
 
     const response = {
       name: customerName,
