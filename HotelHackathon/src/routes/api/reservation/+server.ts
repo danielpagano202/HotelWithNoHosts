@@ -1,8 +1,9 @@
+import PocketBase from 'pocketbase';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import jwt from 'jsonwebtoken';
 import { sendBookingConfirmation } from '$lib/mailer.js';
-
+import { pb } from '$lib/pocketbase';
 const ISSUER_ID             = process.env.GOOGLE_WALLET_ISSUER_ID ?? '';
 const SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_WALLET_SA_EMAIL ?? '';
 const PRIVATE_KEY           = (process.env.GOOGLE_WALLET_PRIVATE_KEY ?? '').replace(/\\n/g, '\n');
@@ -75,7 +76,7 @@ function buildAddToWalletLink({ confirmationCode, guestName, room, checkIn, chec
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { guestName, guestEmail, checkIn, checkOut } = await request.json();
+    const { guestName, guestEmail, checkIn, checkOut, userId, roomId } = await request.json();
 
     if (!guestName || !guestEmail || !checkIn || !checkOut) {
       return json({ error: 'Missing required fields.' }, { status: 400 });
@@ -84,14 +85,27 @@ export const POST: RequestHandler = async ({ request }) => {
     const confirmationCode = generateConfirmationCode();
     const room = assignRoom();
     const addToWalletLink = '';
-	  //  buildAddToWalletLink({ confirmationCode, guestName, room, checkIn, checkOut });
+      //  buildAddToWalletLink({ confirmationCode, guestName, room, checkIn, checkOut });
 
-    // TODO: Save to PocketBase
-    // await pb.collection('reservations').create({ guestName, guestEmail, confirmationCode, room, checkIn, checkOut });
 
-    // TODO: Send confirmation email
-	await sendBookingConfirmation(guestEmail, { customerName: guestName, checkIn, checkOut, roomId: room, bookingId: confirmationCode });
-    return json({ confirmationCode, room, addToWalletLink }, { status: 201 });
+// Save to PocketBase
+await pb.collection('Reservation').create({
+  check_in: checkIn,
+  check_out: checkOut,
+  reservation_users: userId,
+  reservation_roomkey: roomId,
+});
+
+// Send confirmation email
+await sendBookingConfirmation(guestEmail, { 
+  customerName: guestName, 
+  checkIn, 
+  checkOut, 
+  roomId: room, 
+  bookingId: confirmationCode 
+});
+
+return json({ confirmationCode, room, addToWalletLink }, { status: 201 });
   } catch (err) {
     console.error(err);
     return json({ error: 'Internal server error.' }, { status: 500 });
