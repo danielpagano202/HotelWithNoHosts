@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { getUserById, getMessagesByUserId, addMessageForUser } from '$lib/mock-data';
+	import { addMessageForUser, getMessagesByUserId, getUserById } from '$lib/mock-data';
 	import { authUser, inferRole, isAuthenticated } from '$lib/stores/auth';
 	import type { User, Message } from '$lib/mock-data';
 
@@ -25,6 +25,11 @@
 	onMount(async () => {
 		if (!$isAuthenticated) {
 			await goto('/login');
+			return;
+		}
+
+		if (role !== 'staff') {
+			await goto('/home');
 			return;
 		}
 
@@ -59,7 +64,7 @@
 <div class="space-y-6">
 	<div class="flex items-end justify-between gap-4">
 		<div class="flex items-center gap-3">
-			<a href="/admin" class="btn btn-ghost btn-sm btn-circle" aria-label="Back to admin">
+				<a href="/admin" class="btn btn-ghost btn-sm btn-circle" aria-label="Back to staff console">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
@@ -76,7 +81,7 @@
 				<p class="text-sm text-base-content/70">{user?.email}</p>
 			</div>
 		</div>
-		{#if role !== 'admin'}
+		{#if role !== 'staff'}
 			<div class="badge badge-warning badge-outline">Demo mode</div>
 		{/if}
 	</div>

@@ -1,33 +1,68 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { getHomeSnapshot, getRoomById } from '$lib/mock-data';
+	import { getAllNotifications, getHomeSnapshot, getNotificationsForUser, getRoomById } from '$lib/mock-data';
 	import { authUser, getDisplayName, inferRole, isAuthenticated } from '$lib/stores/auth';
 
 	const displayName = $derived(getDisplayName($authUser));
 	const role = $derived(inferRole($authUser));
+	const isCustomer = $derived(
+		$authUser && typeof $authUser.role === 'string' && $authUser.role.toLowerCase().trim() === 'customer'
+	);
 
 	let rooms = $state<Awaited<ReturnType<typeof getHomeSnapshot>>>([]);
 	let primaryRoom = $state<Awaited<ReturnType<typeof getRoomById>> | null>(null);
+	let notifications = $state<Awaited<ReturnType<typeof getAllNotifications>>>([]);
 	let loading = $state(true);
 	let loadError = $state('');
+	type NotificationItem = Awaited<ReturnType<typeof getAllNotifications>>[number];
+
+	const getNotificationTitle = (notice: NotificationItem) =>
+		(notice as { title?: string; Title?: string }).title ||
+		(notice as { title?: string; Title?: string }).Title ||
+		'Notification';
+
+	const getNotificationBody = (notice: NotificationItem) =>
+		(notice as { body?: string; Body?: string; content?: string; text?: string }).body ||
+		(notice as { body?: string; Body?: string; content?: string; text?: string }).Body ||
+		(notice as { body?: string; Body?: string; content?: string; text?: string }).content ||
+		(notice as { body?: string; Body?: string; content?: string; text?: string }).text ||
+		'No details provided.';
 
 	const loadDashboard = async () => {
 		loading = true;
 		loadError = '';
 
 		try {
-			rooms = await getHomeSnapshot($authUser);
-			console.log('Loaded rooms for home snapshot:', rooms);
-			if (rooms.length > 0) {
-				primaryRoom = await getRoomById(rooms[0].id);
+			if (role === 'cleaner') {
+				const snapshotUser = $authUser
+					? {
+						id: $authUser.id,
+						email: $authUser.email,
+						role: inferRole($authUser)
+					}
+					: null;
+				rooms = await getHomeSnapshot(snapshotUser);
+				if (rooms.length > 0) {
+					primaryRoom = await getRoomById(rooms[0].id);
+				} else {
+					primaryRoom = null;
+				}
 			} else {
+				rooms = [];
 				primaryRoom = null;
+			}
+
+			if (role === 'cleaner' && $authUser?.id) {
+				notifications = await getNotificationsForUser($authUser.id);
+			} else {
+				notifications = await getAllNotifications();
 			}
 		} catch (error) {
 			loadError = error instanceof Error ? error.message : 'Failed to load home data.';
 			rooms = [];
 			primaryRoom = null;
+			notifications = [];
 		} finally {
 			loading = false;
 		}
@@ -44,79 +79,101 @@
 </script>
 
 <section class="space-y-6">
+	{#if role === 'cleaner'}
+		<div class="rounded-2xl border border-warning/40 bg-warning/10 p-4 shadow-sm">
+			<p class="text-xs font-semibold uppercase tracking-wide text-warning">Cleaner Shift View</p>
+			<p class="mt-1 text-sm text-base-content/80">
+				Your dashboard is focused on room readiness and cleaning assignments.
+			</p>
+		</div>
+	{/if}
+
 	<div class="flex flex-wrap items-end justify-between gap-4">
 		<div>
 			<h1 class="text-4xl font-bold">Welcome, {displayName}</h1>
-			<p class="text-base-content/70">Role: {role}. This page now reads live room data from PocketBase.</p>
+			<p class="text-base-content/70">
+				{role === 'cleaner' ? 'Focus on ready-for-cleaning rooms and complete tasks quickly.' : 'Here are the latest app notifications.'}
+			</p>
 		</div>
 		<div class="flex gap-2">
-			<a class="btn btn-primary gap-2" href="/booking">
-				<span class="text-lg">🔑</span>
-				Book a Room
-			</a>
-			<a class="btn btn-outline" href="/help">Ask AI Host</a>
+			{#if isCustomer}
+				<a class="btn btn-outline" href="/help">Ask AI Host</a>
+			{/if}
 		</div>
 	</div>
 
-	<div class="grid gap-4 lg:grid-cols-2">
-		<article class="card border border-base-300/60 bg-base-100/85 shadow-md">
-			<div class="card-body">
-				<h2 class="card-title">Primary room</h2>
-				{#if loading}
-					<p class="opacity-70">Loading room details...</p>
-				{:else if loadError}
-					<div class="alert alert-error text-sm">{loadError}</div>
-				{:else if primaryRoom}
-					<p class="text-lg font-semibold">Room {primaryRoom.Room_Number}</p>
-					<p class="text-sm opacity-70">Location: {primaryRoom.Location}</p>
-					<p class="text-sm opacity-70">Beds: {primaryRoom.num_beds}</p>
-					<p class="text-sm opacity-70">Status: {primaryRoom.Status}</p>
-					<div class="card-actions justify-end">
-						<a class="btn btn-primary btn-sm" href={`/room/${primaryRoom.id}`}>View room</a>
-					</div>
-				{:else}
-					<p class="opacity-70">No room found for this account.</p>
-				{/if}
-			</div>
-		</article>
+	{#if role === 'cleaner'}
+		<div class="grid gap-4 lg:grid-cols-2">
+			<article class="card border border-warning/50 bg-warning/5 shadow-md">
+				<div class="card-body">
+					<h2 class="card-title">Next assignment</h2>
+					{#if loading}
+						<p class="opacity-70">Loading room details...</p>
+					{:else if loadError}
+						<div class="alert alert-error text-sm">{loadError}</div>
+					{:else if primaryRoom}
+						<p class="text-lg font-semibold">Room {primaryRoom.Room_Number}</p>
+						<p class="text-sm opacity-70">Location: {primaryRoom.Location}</p>
+						<p class="text-sm opacity-70">Beds: {primaryRoom.num_beds}</p>
+						<p class="text-sm opacity-70">Status: {primaryRoom.Status}</p>
+						<div class="card-actions justify-end">
+							<a class="btn btn-primary btn-sm" href={`/room/${primaryRoom.id}`}>View room</a>
+						</div>
+					{:else}
+						<p class="opacity-70">No room found for this account.</p>
+					{/if}
+				</div>
+			</article>
 
-		<article class="card border border-base-300/60 bg-base-100/85 shadow-md">
-			<div class="card-body">
-				<h2 class="card-title">{role === 'cleaner' ? 'Rooms to clean' : 'Assigned rooms'}</h2>
-				{#if loading}
-					<p class="opacity-70">Loading rooms...</p>
-				{:else if loadError}
-					<div class="alert alert-error text-sm">{loadError}</div>
-				{:else if rooms.length > 0}
-					<ul class="space-y-2">
-						{#each rooms as room}
-							<li class="flex items-center justify-between rounded-lg bg-base-200/70 p-3">
-								<div>
-									<p class="font-medium">Room {room.Room_Number}</p>
-									<p class="text-xs opacity-70">{room.Location} - {room.Status}</p>
-								</div>
-								<a class="btn btn-xs btn-outline" href={`/room/${room.id}`}>Open</a>
-							</li>
-						{/each}
-					</ul>
-				{:else}
-					<p class="opacity-70">No rooms available for your role.</p>
-				{/if}
-			</div>
-		</article>
-	</div>
+			<article class="card border border-warning/50 bg-warning/5 shadow-md">
+				<div class="card-body">
+					<h2 class="card-title">Rooms to clean</h2>
+					{#if loading}
+						<p class="opacity-70">Loading rooms...</p>
+					{:else if loadError}
+						<div class="alert alert-error text-sm">{loadError}</div>
+					{:else if rooms.length > 0}
+						<ul class="space-y-2">
+							{#each rooms as room}
+								<li class="flex items-center justify-between rounded-lg bg-base-200/70 p-3">
+									<div>
+										<p class="font-medium">Room {room.Room_Number}</p>
+										<p class="text-xs opacity-70">{room.Location} - {room.Status}</p>
+									</div>
+									<a class="btn btn-xs btn-outline" href={`/room/${room.id}`}>Open</a>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						<p class="opacity-70">No rooms available for your role.</p>
+					{/if}
+				</div>
+			</article>
+		</div>
+	{/if}
 
 	<article class="card border border-base-300/60 bg-base-100/85 shadow-md">
 		<div class="card-body">
-			<h2 class="card-title">Room Summary</h2>
+			<h2 class="card-title">Notifications</h2>
 			{#if loading}
-				<p class="opacity-70">Preparing summary...</p>
+				<p class="opacity-70">Loading notifications...</p>
 			{:else if loadError}
 				<div class="alert alert-error text-sm">{loadError}</div>
+			{:else if notifications.length === 0}
+				<p class="text-sm opacity-80">No notifications yet.</p>
 			{:else}
-				<p class="text-sm opacity-80">
-					{rooms.length} room{rooms.length === 1 ? '' : 's'} available in your current snapshot.
-				</p>
+				<div class="space-y-3">
+					{#each notifications as notice}
+						<div class="rounded-xl border border-base-300/60 bg-base-200/60 p-3">
+							<p class="font-semibold">{getNotificationTitle(notice)}</p>
+							<p class="mt-1 text-sm opacity-80 whitespace-pre-wrap">{getNotificationBody(notice)}</p>
+
+							<div class="mt-2 flex items-center gap-3 text-xs opacity-70">
+								<span>{new Date(notice.created).toLocaleString()}</span>
+							</div>
+						</div>
+					{/each}
+				</div>
 			{/if}
 		</div>
 	</article>

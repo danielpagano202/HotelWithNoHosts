@@ -70,6 +70,13 @@
 			return;
 		}
 
+		const normalizedRole =
+			typeof $authUser?.role === 'string' ? $authUser.role.toLowerCase().trim() : '';
+		if (normalizedRole !== 'customer') {
+			await goto('/home');
+			return;
+		}
+
 		const userId = $authUser?.id;
 		if (!userId) {
 			errorMessage = 'No authenticated user found for chat history.';

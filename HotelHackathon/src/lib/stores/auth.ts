@@ -6,6 +6,7 @@ type AuthUser = {
 	id: string;
 	email: string;
 	name?: string;
+	role?: 'guest' | 'customer' | 'staff' | 'cleaner' | 'admin' | string;
 };
 
 const initialUser = (pb.authStore.model as AuthUser | null) ?? null;
@@ -55,12 +56,20 @@ export const getDisplayName = (user: AuthUser | null) => {
 	return user.email;
 };
 
-export const inferRole = (user: AuthUser | null): 'guest' | 'cleaner' | 'admin' => {
-	if (!user?.email) return 'guest';
+export const inferRole = (user: AuthUser | null): 'guest' | 'customer' | 'cleaner' | 'staff' => {
+	if (!user) return 'guest';
+
+	const normalizedRole = typeof user.role === 'string' ? user.role.toLowerCase().trim() : '';
+	if (normalizedRole === 'customer') return 'customer';
+	if (normalizedRole === 'cleaner') return 'cleaner';
+	if (normalizedRole === 'staff' || normalizedRole === 'admin') return 'staff';
+
+	// Backward compatibility for records that still don't have role populated.
+	if (!user.email) return 'guest';
 	const email = user.email.toLowerCase();
-	if (email.includes('admin')) return 'admin';
+	if (email.includes('admin') || email.includes('staff')) return 'staff';
 	if (email.includes('clean')) return 'cleaner';
-	return 'guest';
+	return 'customer';
 };
 
 if (browser) {

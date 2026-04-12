@@ -7,6 +7,7 @@ export type User = {
 	id: string;
 	email: string;
 	name?: string;
+	role: 'guest' | 'staff' | 'cleaner';
 };
 
 export type Message = {
@@ -39,8 +40,13 @@ export type AppNotification = {
 	id: string;
 	title: string;
 	body: string;
-	createdAt: string;
-	roomId?: string;
+	created: string;
+	room: string;
+	user: string;
+	expand?: {
+		room: Room;
+		user: User;
+	}
 };
 
 export type ScanLog = {
@@ -73,28 +79,7 @@ export type EscalationNotification = {
 	}
 };
 
-const notifications: AppNotification[] = [
-	{
-		id: 'n-1',
-		title: 'Room 410 ready',
-		body: 'Your room has been prepared and your wallet key is active.',
-		createdAt: '2026-04-11T13:55:00Z',
-		roomId: 'r-410'
-	},
-	{
-		id: 'n-2',
-		title: 'AI host update',
-		body: 'Your request for a late checkout was sent to the property manager.',
-		createdAt: '2026-04-11T16:20:00Z'
-	},
-	{
-		id: 'n-3',
-		title: 'Cleaner dispatch',
-		body: 'Room 312 has been assigned for cleaning.',
-		createdAt: '2026-04-11T17:00:00Z',
-		roomId: 'r-312'
-	}
-];
+
 
 const scanLogs: ScanLog[] = [
 	{ id: 's-1', roomNumber: '410', userEmail: 'tori@example.com', action: 'entry', createdAt: '2026-04-11T14:03:21Z' },
@@ -123,13 +108,21 @@ const reservations: Reservation[] = [
 
 let messages: Message[] = [];
 
-export const getHomeSnapshot = async (user: { email?: string } | null) => {
-	const role = inferRole(user ? { id: 'local', email: user.email || '' } : null);
+export const getHomeSnapshot = async (user: { id?: string; email?: string; role?: string } | null) => {
+	const role = inferRole(
+		user
+			? {
+				id: user.id || 'local',
+				email: user.email || '',
+				role: user.role
+			}
+			: null
+	);
 
 	if(role === 'cleaner') {
 		const rooms: Room[] = await pb.collection('Room').getFullList({
 			sort: 'Room_Number',
-			filter: 'status = "Ready For Cleaning"'
+			filter: 'Status = "Ready For Cleaning"'
 		});
 		return rooms;
 	}else{
@@ -166,7 +159,40 @@ export const lockRoom = async (roomId: string): Promise<Room> => {
 	return updatedRoom as Room;
 }
 
-export const getAdminSnapshot = async () => {
+export const getNotificationsForUser = async (userId: string) => {
+	try {
+		return await pb.collection<AppNotification>('Notification').getFullList({
+			filter: `notification_user = "${userId}"`,
+			sort: '-created'
+		});
+	} catch {
+		try {
+			return await pb.collection<AppNotification>('Notification').getFullList({
+				filter: `user = "${userId}"`,
+				sort: '-created'
+			});
+		} catch {
+			const allNotifications = await pb.collection<AppNotification>('Notification').getFullList({
+				sort: '-created'
+			});
+			return allNotifications.filter((notice) => {
+				const candidateUser = (notice as { notification_user?: string; user?: string }).notification_user ||
+					(notice as { notification_user?: string; user?: string }).user;
+				return candidateUser === userId;
+			});
+		}
+	}
+}
+
+export const getAllNotifications = async () => {
+	const notifications = await pb.collection<AppNotification>('Notification').getFullList({
+		sort: '-created',
+		expand: 'user'
+	});
+	return notifications;
+}
+
+export const getStaffSnapshot = async () => {
 	const escalationNotifications = await pb.collection('EscalationNotifications').getFullList({
 		sort: '-created',
 		filter: 'resolved = false',
@@ -199,6 +225,16 @@ export const getMessagesByUserId = async (userId: string) => {
 		sort: '-created'
 	});
 	return messages;
+};
+
+export const addMessageForUser = async (userId: string, role: 'User' | 'AI' | 'Staff', content: string) => {
+	const newMessage = await pb.collection<Message>('Chatmessages').create({
+		user_chat: userId,
+		sender: role,
+		content
+	});
+	messages = [newMessage, ...messages];
+	return newMessage;
 };
 
 // Swap each function here with PocketBase queries when backend collections are ready.

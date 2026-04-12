@@ -2,29 +2,29 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import {
-		getAdminSnapshot,
+		getStaffSnapshot,
 		getAllUsers,
 		markEscalationNotificationResolved
 	} from '$lib/mock-data';
 	import { authUser, inferRole, isAuthenticated } from '$lib/stores/auth';
 
-	type AdminSnapshot = Awaited<ReturnType<typeof getAdminSnapshot>>;
+	type StaffSnapshot = Awaited<ReturnType<typeof getStaffSnapshot>>;
 
-	let adminData = $state<AdminSnapshot | null>(null);
+	let staffData = $state<StaffSnapshot | null>(null);
 	let loading = $state(true);
 	let loadError = $state('');
 	let resolvingId = $state('');
 	let users = $state<Awaited<ReturnType<typeof getAllUsers>>>([]);
 	const role = $derived(inferRole($authUser));
 
-	const loadAdminData = async () => {
+	const loadStaffData = async () => {
 		loadError = '';
 		loading = true;
 
 		try {
-			adminData = await getAdminSnapshot();
+			staffData = await getStaffSnapshot();
 		} catch (error) {
-			loadError = error instanceof Error ? error.message : 'Failed to load admin data.';
+			loadError = error instanceof Error ? error.message : 'Failed to load staff data.';
 		} finally {
 			loading = false;
 		}
@@ -44,7 +44,7 @@
 
 		try {
 			await markEscalationNotificationResolved(id);
-			await loadAdminData();
+			await loadStaffData();
 		} catch (error) {
 			loadError = error instanceof Error ? error.message : 'Failed to mark notification as complete.';
 		} finally {
@@ -58,18 +58,23 @@
 			return;
 		}
 
-		await Promise.all([loadAdminData(), loadUsers()]);
+		if (role !== 'staff') {
+			await goto('/home');
+			return;
+		}
+
+		await Promise.all([loadStaffData(), loadUsers()]);
 	});
 </script>
 
 <section class="space-y-6">
 	<div class="flex items-end justify-between gap-4">
 		<div>
-			<h1 class="text-4xl font-bold">Admin Console</h1>
+			<h1 class="text-4xl font-bold">Staff Console</h1>
 			<p class="text-base-content/70">Entry/exit scans and AI escalation notifications.</p>
 		</div>
-		{#if role !== 'admin'}
-			<div class="badge badge-warning badge-outline">Viewing in demo mode (role inferred from email)</div>
+		{#if role !== 'staff'}
+			<div class="badge badge-warning badge-outline">Viewing in demo mode (role inferred from account)</div>
 		{/if}
 	</div>
 
@@ -80,7 +85,7 @@
 				<div class="py-6 text-sm text-base-content/70">Loading scan logs...</div>
 			{:else if loadError}
 				<div class="alert alert-error text-sm">{loadError}</div>
-			{:else if adminData}
+			{:else if staffData}
 				<table class="table table-zebra">
 					<thead>
 						<tr>
@@ -91,7 +96,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each adminData.scanLogs as log}
+						{#each staffData.scanLogs as log}
 							<tr>
 								<td>{new Date(log.createdAt).toLocaleString()}</td>
 								<td>{log.roomNumber}</td>
@@ -116,9 +121,9 @@
 				<div class="py-2 text-sm text-base-content/70">Loading escalation notifications...</div>
 			{:else if loadError}
 				<div class="alert alert-error text-sm">{loadError}</div>
-			{:else if adminData}
+			{:else if staffData}
 				<div class="space-y-3">
-					{#each adminData.escalationNotifications as issue}
+					{#each staffData.escalationNotifications as issue}
 						<div class="rounded-xl border border-base-300/60 bg-base-200/50 p-4">
 							<div class="flex flex-wrap items-center justify-between gap-2">
 								<p class="font-semibold">{issue.content}</p>
@@ -179,4 +184,5 @@
 			</table>
 		</div>
 	</article>
+
 </section>

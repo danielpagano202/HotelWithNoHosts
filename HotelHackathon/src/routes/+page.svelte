@@ -9,7 +9,7 @@
 				<p class="max-w-2xl text-base-content/80 md:text-lg">
 					Skip front desk queues forever. Guests check in virtually, receive secure room QR passes in their
 					digital wallet, and get instant support from an AI host that can escalate directly to your human team
-					through the admin console.
+					through the staff console.
 				</p>
 				<div class="flex flex-wrap gap-3">
 					<a href="/booking" class="btn btn-primary btn-lg">🔑 Book Room & Get Digital Key</a>
@@ -53,7 +53,7 @@
 		<article class="card border border-base-300/60 bg-base-100/80 shadow-md backdrop-blur-sm">
 			<div class="card-body">
 				<h2 class="card-title">💬 AI Concierge</h2>
-				<p>Answers common questions in seconds and forwards edge cases to admins.</p>
+				<p>Answers common questions in seconds and forwards edge cases to staff.</p>
 			</div>
 		</article>
 		<article class="card border border-base-300/60 bg-base-100/80 shadow-md backdrop-blur-sm">

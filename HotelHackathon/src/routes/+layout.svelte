@@ -3,9 +3,13 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { authUser, isAuthenticated, logout } from '$lib/stores/auth';
+	import { authUser, inferRole, isAuthenticated, logout } from '$lib/stores/auth';
 
 	let { children } = $props();
+	const role = $derived(inferRole($authUser));
+	const isCustomer = $derived(
+		$authUser && typeof $authUser.role === 'string' && $authUser.role.toLowerCase().trim() === 'customer'
+	);
 
 	onMount(() => {
 		const unsub = isAuthenticated.subscribe(() => {
@@ -45,7 +49,13 @@
 				<div class="navbar-center hidden lg:flex">
 					<ul class="menu menu-horizontal gap-1 px-1">
 						<li><a href="/home">Home</a></li>
-						<li><a href="/help">Help</a></li>					<li><a href="/book">Book</a></li>						<li><a href="/admin">Admin</a></li>
+						{#if $isAuthenticated && isCustomer}
+							<li><a href="/help">Help</a></li>
+						{/if}
+						<li><a href="/book">Book</a></li>
+						{#if $isAuthenticated && role === 'staff'}
+							<li><a href="/admin">Staff</a></li>
+						{/if}
 					</ul>
 				</div>
 				<div class="navbar-end gap-2">
